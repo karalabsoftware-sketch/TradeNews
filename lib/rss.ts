@@ -4,6 +4,7 @@ export interface NewsItem {
   title: string
   link: string
   pubDate: string
+  summary?: string
   analysis?: string
 }
 
@@ -14,6 +15,14 @@ const FEEDS = [
   { url: 'https://feeds.marketwatch.com/marketwatch/topstories', name: 'MarketWatch' },
   { url: 'https://feeds.bloomberg.com/markets/news.rss', name: 'Bloomberg' },
 ]
+
+function decodeEntities(str: string): string {
+  return str
+    .replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&#39;/g, "'")
+    .replace(/&#x2018;/g, '\u2018').replace(/&#x2019;/g, '\u2019')
+    .replace(/&#x2013;/g, '\u2013').replace(/&#x2014;/g, '\u2014')
+}
 
 async function fetchRSS(url: string): Promise<string | null> {
   try {
@@ -36,21 +45,29 @@ function parseRSSItems(xml: string, source: string): NewsItem[] {
 
   for (const match of itemMatches) {
     const block = match[1]
-    const title =
+
+    const title = decodeEntities(
       block.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/)?.[1] ??
-      block.match(/<title>([\s\S]*?)<\/title>/)?.[1] ??
-      ''
+      block.match(/<title>([\s\S]*?)<\/title>/)?.[1] ?? ''
+    ).replace(/<[^>]+>/g, '').trim()
+
     const link =
       block.match(/<link>(.*?)<\/link>/)?.[1] ??
-      block.match(/<guid isPermaLink="true">(.*?)<\/guid>/)?.[1] ??
-      ''
+      block.match(/<guid isPermaLink="true">(.*?)<\/guid>/)?.[1] ?? ''
+
     const pubDate = block.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] ?? new Date().toUTCString()
 
-    const cleaned = title.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&#x2018;/g, '‘').replace(/&#x2019;/g, '’').replace(/&#x2013;/g, '–').replace(/&#x2014;/g, '—').replace(/&apos;/g, "'").replace(/&#39;/g, "'").replace(/&amp;amp;/g, '&').trim()
-    if (!cleaned) continue
+    const rawDesc =
+      block.match(/<content:encoded><!\[CDATA\[([\s\S]*?)\]\]><\/content:encoded>/)?.[1] ??
+      block.match(/<description><!\[CDATA\[([\s\S]*?)\]\]><\/description>/)?.[1] ??
+      block.match(/<description>([\s\S]*?)<\/description>/)?.[1] ?? ''
 
-    const id = Buffer.from(link || cleaned).toString('base64').slice(-16)
-    items.push({ id, source, title: cleaned, link, pubDate })
+    const summary = decodeEntities(rawDesc.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim()).slice(0, 600)
+
+    if (!title) continue
+
+    const id = Buffer.from(link || title).toString('base64').slice(-16)
+    items.push({ id, source, title, link, pubDate, summary: summary || undefined })
   }
 
   return items.slice(0, 15)

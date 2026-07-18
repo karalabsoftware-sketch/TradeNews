@@ -43,7 +43,7 @@ export default function Home() {
     const res = await fetch('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: item.id, title: item.title }),
+      body: JSON.stringify({ id: item.id, title: item.title, summary: item.summary }),
     })
     const { analysis } = await res.json()
     setNews((prev) => prev.map((n) => (n.id === item.id ? { ...n, analysis } : n)))
