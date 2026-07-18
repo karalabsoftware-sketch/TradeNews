@@ -41,13 +41,18 @@ export default function Home() {
 
   async function handleAnalyze(item: NewsItem) {
     setAnalyzingId(item.id)
-    const res = await fetch('/api/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: item.id, title: item.title, summary: item.summary }),
-    })
-    const { analysis } = await res.json()
-    setNews((prev) => prev.map((n) => (n.id === item.id ? { ...n, analysis } : n)))
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: item.id, title: item.title, summary: item.summary }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const { analysis } = await res.json()
+      setNews((prev) => prev.map((n) => (n.id === item.id ? { ...n, analysis } : n)))
+    } catch (e) {
+      console.error('Analyze error:', e)
+    }
     setAnalyzingId(null)
   }
 
