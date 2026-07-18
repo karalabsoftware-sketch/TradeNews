@@ -45,7 +45,7 @@ export default function Home() {
       const res = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: item.id, title: item.title, summary: item.summary }),
+        body: JSON.stringify({ id: item.id, title: item.title, link: item.link, summary: item.summary }),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const { analysis } = await res.json()
