@@ -42,8 +42,10 @@ export async function GET() {
       const writeJson = await writeRes.json()
       results.kv_write = { status: writeRes.status, body: writeJson }
 
-      const readRes = await fetch(`${BASE}/get/test:key`, {
-        headers: { Authorization: `Bearer ${TOKEN}` },
+      const readRes = await fetch(`${BASE}/pipeline`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify([['GET', 'test:key']]),
       })
       const readJson = await readRes.json()
       results.kv_read = { status: readRes.status, body: readJson }
