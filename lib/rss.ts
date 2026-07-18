@@ -46,10 +46,10 @@ function parseRSSItems(xml: string, source: string): NewsItem[] {
       ''
     const pubDate = block.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] ?? new Date().toUTCString()
 
-    const cleaned = title.replace(/<[^>]+>/g, '').trim()
+    const cleaned = title.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&#x2018;/g, '‘').replace(/&#x2019;/g, '’').replace(/&#x2013;/g, '–').replace(/&#x2014;/g, '—').replace(/&apos;/g, "'").replace(/&#39;/g, "'").replace(/&amp;amp;/g, '&').trim()
     if (!cleaned) continue
 
-    const id = Buffer.from(link || cleaned).toString('base64').slice(0, 16)
+    const id = Buffer.from(link || cleaned).toString('base64').slice(-16)
     items.push({ id, source, title: cleaned, link, pubDate })
   }
 
