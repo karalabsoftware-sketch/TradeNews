@@ -12,7 +12,12 @@ async function kvGet<T>(key: string): Promise<T | null> {
   const json = await res.json()
   if (json.result === null || json.result === undefined) return null
   try {
-    return typeof json.result === 'string' ? JSON.parse(json.result) : json.result
+    const parsed = typeof json.result === 'string' ? JSON.parse(json.result) : json.result
+    // Eski yanlış format kontrolü: {value: "..."} wrapper'ı varsa içini aç
+    if (parsed && typeof parsed === 'object' && 'value' in parsed && !Array.isArray(parsed)) {
+      return typeof parsed.value === 'string' ? JSON.parse(parsed.value) : parsed.value
+    }
+    return parsed
   } catch {
     return null
   }
