@@ -7,18 +7,12 @@ export interface NewsItem {
   analysis?: string
 }
 
-const RSSHUB_INSTANCES = [
-  'https://rsshub.app',
-  'https://rsshub.rssforever.com',
-  'https://hub.slarker.me',
-]
-
-const ACCOUNTS = [
-  { handle: 'FirstSquawk', name: 'First Squawk' },
-  { handle: 'zerohedge', name: 'ZeroHedge' },
-  { handle: 'unusual_whales', name: 'Unusual Whales' },
-  { handle: 'WalterBloomberg', name: 'Walter Bloomberg' },
-  { handle: 'spectatorindex', name: 'The Spectator Index' },
+const FEEDS = [
+  { url: 'https://feeds.feedburner.com/zerohedge/feed', name: 'ZeroHedge' },
+  { url: 'https://unusualwhales.com/rss', name: 'Unusual Whales' },
+  { url: 'https://feeds.reuters.com/reuters/businessNews', name: 'Reuters' },
+  { url: 'https://feeds.marketwatch.com/marketwatch/topstories', name: 'MarketWatch' },
+  { url: 'https://feeds.bloomberg.com/markets/news.rss', name: 'Bloomberg' },
 ]
 
 async function fetchRSS(url: string): Promise<string | null> {
@@ -48,38 +42,30 @@ function parseRSSItems(xml: string, source: string): NewsItem[] {
       ''
     const link =
       block.match(/<link>(.*?)<\/link>/)?.[1] ??
-      block.match(/<guid>(.*?)<\/guid>/)?.[1] ??
+      block.match(/<guid isPermaLink="true">(.*?)<\/guid>/)?.[1] ??
       ''
     const pubDate = block.match(/<pubDate>(.*?)<\/pubDate>/)?.[1] ?? new Date().toUTCString()
 
     const cleaned = title.replace(/<[^>]+>/g, '').trim()
-    if (!cleaned || cleaned.startsWith('RT @')) continue
+    if (!cleaned) continue
 
     const id = Buffer.from(link || cleaned).toString('base64').slice(0, 16)
     items.push({ id, source, title: cleaned, link, pubDate })
   }
 
-  return items.slice(0, 10)
-}
-
-async function fetchAccountFeed(handle: string): Promise<NewsItem[]> {
-  for (const instance of RSSHUB_INSTANCES) {
-    const xml = await fetchRSS(`${instance}/twitter/user/${handle}`)
-    if (xml) {
-      console.log(`Fetched ${handle} from ${instance}`)
-      return parseRSSItems(xml, handle)
-    }
-  }
-  console.warn(`Could not fetch ${handle} from any RSSHub instance`)
-  return []
+  return items.slice(0, 15)
 }
 
 export async function fetchAllFeeds(): Promise<NewsItem[]> {
-  const fetches = ACCOUNTS.map((account) =>
-    fetchAccountFeed(account.handle).then((items) =>
-      items.map((item) => ({ ...item, source: account.name }))
-    )
-  )
+  const fetches = FEEDS.map(async ({ url, name }) => {
+    const xml = await fetchRSS(url)
+    if (!xml) {
+      console.warn(`Could not fetch ${name}`)
+      return []
+    }
+    console.log(`Fetched ${name}`)
+    return parseRSSItems(xml, name)
+  })
 
   const settled = await Promise.allSettled(fetches)
   const results: NewsItem[] = []
