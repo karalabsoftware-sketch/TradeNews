@@ -7,8 +7,8 @@ export async function GET() {
 
   const feeds = [
     { key: 'zerohedge', url: 'https://feeds.feedburner.com/zerohedge/feed' },
-    { key: 'unusual_whales', url: 'https://unusualwhales.com/rss' },
-    { key: 'reuters', url: 'https://feeds.reuters.com/reuters/businessNews' },
+    { key: 'dowjones', url: 'https://feeds.content.dowjones.io/public/rss/mw-realtimeheadlines' },
+    { key: 'investing', url: 'https://www.investing.com/rss/news.rss' },
     { key: 'marketwatch', url: 'https://feeds.marketwatch.com/marketwatch/topstories' },
     { key: 'bloomberg', url: 'https://feeds.bloomberg.com/markets/news.rss' },
   ]

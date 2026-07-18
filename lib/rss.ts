@@ -9,8 +9,8 @@ export interface NewsItem {
 
 const FEEDS = [
   { url: 'https://feeds.feedburner.com/zerohedge/feed', name: 'ZeroHedge' },
-  { url: 'https://unusualwhales.com/rss', name: 'Unusual Whales' },
-  { url: 'https://feeds.reuters.com/reuters/businessNews', name: 'Reuters' },
+  { url: 'https://feeds.content.dowjones.io/public/rss/mw-realtimeheadlines', name: 'Dow Jones' },
+  { url: 'https://www.investing.com/rss/news.rss', name: 'Investing.com' },
   { url: 'https://feeds.marketwatch.com/marketwatch/topstories', name: 'MarketWatch' },
   { url: 'https://feeds.bloomberg.com/markets/news.rss', name: 'Bloomberg' },
 ]
