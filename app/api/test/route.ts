@@ -34,10 +34,10 @@ export async function GET() {
   // KV write test
   if (BASE && TOKEN) {
     try {
-      const writeRes = await fetch(`${BASE}/set/test:key`, {
+      const writeRes = await fetch(`${BASE}/pipeline`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'text/plain' },
-        body: JSON.stringify({ ok: true }),
+        headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify([['SET', 'test:key', JSON.stringify({ ok: true })]]),
       })
       const writeJson = await writeRes.json()
       results.kv_write = { status: writeRes.status, body: writeJson }
