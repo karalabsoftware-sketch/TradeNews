@@ -7,7 +7,6 @@ export interface NewsItem {
   analysis?: string
 }
 
-// RSSHub public instances - Twitter/X user timeline feed
 const RSSHUB_INSTANCES = [
   'https://rsshub.app',
   'https://rsshub.rssforever.com',
@@ -30,7 +29,6 @@ async function fetchRSS(url: string): Promise<string | null> {
     })
     if (!res.ok) return null
     const text = await res.text()
-    // RSSHub bazen HTML hata sayfası döner, XML kontrolü yap
     if (!text.includes('<item>')) return null
     return text
   } catch {
@@ -45,8 +43,8 @@ function parseRSSItems(xml: string, source: string): NewsItem[] {
   for (const match of itemMatches) {
     const block = match[1]
     const title =
-      block.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/s)?.[1] ??
-      block.match(/<title>(.*?)<\/title>/s)?.[1] ??
+      block.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/)?.[1] ??
+      block.match(/<title>([\s\S]*?)<\/title>/)?.[1] ??
       ''
     const link =
       block.match(/<link>(.*?)<\/link>/)?.[1] ??
@@ -66,7 +64,6 @@ function parseRSSItems(xml: string, source: string): NewsItem[] {
 
 async function fetchAccountFeed(handle: string): Promise<NewsItem[]> {
   for (const instance of RSSHUB_INSTANCES) {
-    // RSSHub Twitter endpoint: /twitter/user/:id
     const xml = await fetchRSS(`${instance}/twitter/user/${handle}`)
     if (xml) {
       console.log(`Fetched ${handle} from ${instance}`)
