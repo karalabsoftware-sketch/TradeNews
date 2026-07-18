@@ -8,6 +8,7 @@ interface NewsItem {
   title: string
   link: string
   pubDate: string
+  summary?: string
   analysis?: string
 }
 
