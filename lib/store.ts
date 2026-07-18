@@ -6,13 +6,11 @@ const NEWS_KEY = 'news:items'
 const MAX_ITEMS = 500
 
 async function kvGet<T>(key: string): Promise<T | null> {
-  const res = await fetch(`${BASE}/pipeline`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify([['GET', key]]),
+  const res = await fetch(`${BASE}/get/${encodeURIComponent(key)}`, {
+    headers: { Authorization: `Bearer ${TOKEN}` },
   })
   const json = await res.json()
-  const result = json?.[0]?.result
+  const result = json?.result
   if (result === null || result === undefined) return null
   try {
     return typeof result === 'string' ? JSON.parse(result) : result
