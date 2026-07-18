@@ -31,5 +31,26 @@ export async function GET() {
   const TOKEN = process.env.KV_REST_API_TOKEN
   results.kv = { url_set: !!BASE, token_set: !!TOKEN }
 
+  // KV write test
+  if (BASE && TOKEN) {
+    try {
+      const writeRes = await fetch(`${BASE}/set/test:key`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: JSON.stringify({ ok: true }) }),
+      })
+      const writeJson = await writeRes.json()
+      results.kv_write = { status: writeRes.status, body: writeJson }
+
+      const readRes = await fetch(`${BASE}/get/test:key`, {
+        headers: { Authorization: `Bearer ${TOKEN}` },
+      })
+      const readJson = await readRes.json()
+      results.kv_read = { status: readRes.status, body: readJson }
+    } catch (e) {
+      results.kv_write_error = String(e)
+    }
+  }
+
   return NextResponse.json(results)
 }
