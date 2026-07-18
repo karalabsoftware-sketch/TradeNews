@@ -18,19 +18,23 @@ export default function Home() {
   const [analyzingId, setAnalyzingId] = useState<string | null>(null)
   const [filter, setFilter] = useState('All')
 
-  const sources = ['All', 'First Squawk', 'ZeroHedge', 'Unusual Whales', 'Walter Bloomberg', 'The Spectator Index']
+  const sources = ['All', 'ZeroHedge', 'CNBC Markets', 'Investing.com', 'MarketWatch', 'Bloomberg']
 
   async function loadNews() {
     const res = await fetch('/api/news')
     const data = await res.json()
-    setNews(data)
+    setNews(Array.isArray(data) ? data : [])
     setLoading(false)
   }
 
   async function handleRefresh() {
     setRefreshing(true)
-    await fetch('/api/refresh', { method: 'POST' })
-    await loadNews()
+    try {
+      await fetch('/api/refresh', { method: 'POST' })
+      await loadNews()
+    } catch (e) {
+      console.error(e)
+    }
     setRefreshing(false)
   }
 
