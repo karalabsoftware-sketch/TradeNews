@@ -2,7 +2,7 @@ import type { NewsItem } from './rss'
 
 const BASE = process.env.KV_REST_API_URL!
 const TOKEN = process.env.KV_REST_API_TOKEN!
-const NEWS_KEY = 'news:items'
+const NEWS_KEY = 'news_items'
 const MAX_ITEMS = 500
 
 async function kvGet<T>(key: string): Promise<T | null> {
