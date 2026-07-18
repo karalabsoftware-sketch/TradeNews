@@ -67,7 +67,15 @@ function parseRSSItems(xml: string, source: string): NewsItem[] {
     if (!title) continue
 
     const raw = link || title
-    const id = Buffer.from(raw).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(-20)
+    // URL path'ini al, yoksa title'ın son 30 karakterini kullan
+    let id: string
+    try {
+      const url = new URL(raw)
+      id = (url.pathname + url.search).replace(/[^a-zA-Z0-9]/g, '').slice(-24)
+    } catch {
+      id = Buffer.from(raw).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(-24)
+    }
+    if (!id) id = Math.random().toString(36).slice(2)
     items.push({ id, source, title, link, pubDate, summary: summary || undefined })
   }
 
