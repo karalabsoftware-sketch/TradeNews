@@ -5,18 +5,19 @@ export const dynamic = 'force-dynamic'
 export async function GET() {
   const results: Record<string, unknown> = {}
 
-  // 1. Nitter RSS test
+  // 1. RSSHub test
   try {
-    const res = await fetch('https://nitter.poast.org/FirstSquawk/rss', {
+    const res = await fetch('https://rsshub.app/twitter/user/FirstSquawk', {
       headers: { 'User-Agent': 'Mozilla/5.0' },
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(10000),
     })
     const text = await res.text()
-    results.nitter_status = res.status
-    results.nitter_ok = res.ok
-    results.nitter_preview = text.slice(0, 500)
+    results.rsshub_status = res.status
+    results.rsshub_ok = res.ok
+    results.rsshub_has_items = text.includes('<item>')
+    results.rsshub_preview = text.slice(0, 300)
   } catch (e) {
-    results.nitter_error = String(e)
+    results.rsshub_error = String(e)
   }
 
   // 2. KV test
@@ -38,5 +39,5 @@ export async function GET() {
     results.kv_error = String(e)
   }
 
-  return NextResponse.json(results, { status: 200 })
+  return NextResponse.json(results)
 }
