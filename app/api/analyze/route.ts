@@ -14,16 +14,23 @@ export async function POST(req: NextRequest) {
     ? `Başlık: ${title}\n\nİçerik özeti: ${summary}`
     : `Başlık: ${title}`
 
-  const chat = await groq.chat.completions.create({
-    model: 'llama-3.1-8b-instant',
-    messages: [
-      {
-        role: 'user',
-        content: `Aşağıdaki finansal haberi Türkçe olarak 2-3 cümleyle analiz et. Borsaya ve piyasalara olası etkisini belirt.\n\n${content}`,
-      },
-    ],
-    max_tokens: 200,
-  })
+  let chat
+  try {
+    chat = await groq.chat.completions.create({
+      model: 'llama-3.1-8b-instant',
+      messages: [
+        {
+          role: 'user',
+          content: `Aşağıdaki finansal haberi Türkçe olarak 2-3 cümleyle analiz et. Borsaya ve piyasalara olası etkisini belirt.\n\n${content}`,
+        },
+      ],
+      max_tokens: 200,
+    })
+  } catch (e: unknown) {
+    const err = e as { status?: number; error?: unknown; message?: string }
+    console.error('Groq error:', JSON.stringify({ status: err.status, error: err.error, message: err.message }))
+    return NextResponse.json({ error: 'Groq failed', detail: err.error }, { status: 500 })
+  }
 
   const analysis = chat.choices[0].message.content ?? ''
   await updateAnalysis(id, analysis)
