@@ -66,7 +66,8 @@ function parseRSSItems(xml: string, source: string): NewsItem[] {
 
     if (!title) continue
 
-    const id = Buffer.from(link || title).toString('base64').slice(-16)
+    const raw = link || title
+    const id = Buffer.from(raw).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(-20)
     items.push({ id, source, title, link, pubDate, summary: summary || undefined })
   }
 
