@@ -9,7 +9,7 @@ export interface NewsItem {
 
 const FEEDS = [
   { url: 'https://feeds.feedburner.com/zerohedge/feed', name: 'ZeroHedge' },
-  { url: 'https://feeds.content.dowjones.io/public/rss/mw-realtimeheadlines', name: 'Dow Jones' },
+  { url: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114', name: 'CNBC Markets' },
   { url: 'https://www.investing.com/rss/news.rss', name: 'Investing.com' },
   { url: 'https://feeds.marketwatch.com/marketwatch/topstories', name: 'MarketWatch' },
   { url: 'https://feeds.bloomberg.com/markets/news.rss', name: 'Bloomberg' },
