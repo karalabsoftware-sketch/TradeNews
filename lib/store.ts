@@ -20,10 +20,9 @@ async function kvGet<T>(key: string): Promise<T | null> {
 
 async function kvSet(key: string, value: unknown): Promise<void> {
   const serialized = JSON.stringify(value)
-  await fetch(`${BASE}/set/${key}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify([key, serialized]),
+  await fetch(`${BASE}/set/${key}/${encodeURIComponent(serialized)}`, {
+    method: 'GET',
+    headers: { Authorization: `Bearer ${TOKEN}` },
   })
 }
 
