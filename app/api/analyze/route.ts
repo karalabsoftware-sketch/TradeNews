@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   let chat
   try {
     chat = await groq.chat.completions.create({
-      model: 'llama-3.3-70b-versatile',
+      model: process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
       messages: [
         {
           role: 'user',
