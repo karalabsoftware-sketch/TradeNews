@@ -2,13 +2,16 @@ import type { NewsItem } from './rss'
 
 const BASE = process.env.KV_REST_API_URL!
 const TOKEN = process.env.KV_REST_API_TOKEN!
+
+console.log('KV BASE:', BASE)
+console.log('KV TOKEN set:', !!TOKEN, 'length:', TOKEN?.length)
 const NEWS_KEY = 'news_items'
 const MAX_ITEMS = 500
 
+const headers = { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' }
+
 async function kvGet<T>(key: string): Promise<T | null> {
-  const res = await fetch(`${BASE}/get/${encodeURIComponent(key)}`, {
-    headers: { Authorization: `Bearer ${TOKEN}` },
-  })
+  const res = await fetch(`${BASE}/get/${key}`, { headers })
   const json = await res.json()
   const result = json?.result
   if (result === null || result === undefined) return null
@@ -20,11 +23,10 @@ async function kvGet<T>(key: string): Promise<T | null> {
 }
 
 async function kvSet(key: string, value: unknown): Promise<void> {
-  const serialized = JSON.stringify(value)
-  await fetch(`${BASE}/pipeline`, {
+  await fetch(`${BASE}/set/${key}`, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify([['SET', key, serialized]]),
+    headers,
+    body: JSON.stringify(value),
   })
 }
 
