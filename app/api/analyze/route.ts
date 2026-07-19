@@ -29,14 +29,19 @@ async function fetchArticleContent(url: string): Promise<string> {
 }
 
 export async function POST(req: NextRequest) {
-  const { id, title, link, summary } = await req.json()
+  const { id, title, link, summary, piyasa_tipi } = await req.json()
   if (!id || !title) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
+
+  const isBist = piyasa_tipi === 'bist'
 
   let content = ''
   if (link) content = await fetchArticleContent(link)
   if (!content && summary) content = summary
 
   const haberMetni = content ? `Başlık: ${title}\n\nİçerik: ${content}` : `Başlık: ${title}`
+  const piyasaBaglami = isBist
+    ? `PIYASA_TIPI: BIST30 | PARA_BIRIMI: TL\nAnalizde Türkiye makroekonomik dinamiklerini (TCMB faiz politikası, enflasyon, TL kuru, yerel sektörel çarpanlar) ön planda tut. Etkilenen enstrümanlar için BIST30 hisselerini ve TL bazlı varlıkları önceliklendir.`
+    : `PIYASA_TIPI: GLOBAL | PARA_BIRIMI: USD\nAnalizde Fed politikaları, küresel likidite, dolar endeksi ve uluslararası piyasa dinamiklerini ön planda tut.`
 
   let chat
   try {
@@ -52,7 +57,9 @@ Analiz raporunu her zaman Türkçe dilinde ve strictly geçerli bir JSON format�
         },
         {
           role: 'user',
-          content: `Analiz Edilecek Haber:
+          content: `${piyasaBaglami}
+
+Analiz Edilecek Haber:
 """
 ${haberMetni}
 """

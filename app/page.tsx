@@ -37,7 +37,7 @@ interface TeknikVeri {
 }
 interface NewsItem {
   id: string; source: string; title: string; link: string
-  pubDate: string; summary?: string; analysis?: string
+  pubDate: string; summary?: string; analysis?: string; piyasa: 'global' | 'bist'
 }
 
 const TICKER_LISTESI = [
@@ -294,17 +294,27 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [analyzingId, setAnalyzingId] = useState<string | null>(null)
+  const [piyasa, setPiyasa] = useState<'global' | 'bist'>('global')
   const [filter, setFilter] = useState('All')
   const [teknikState, setTeknikState] = useState<Record<string, { loading: boolean; ticker: string; data?: { teknikVeri: TeknikVeri; analiz: TeknikAnaliz; sinyal?: Sinyal } }>>({})
   const [manuelTicker, setManuelTicker] = useState<Record<string, string>>({})
 
-  const sources = ['All', 'ZeroHedge', 'CNBC Markets', 'Investing.com', 'MarketWatch', 'Bloomberg']
+  const GLOBAL_SOURCES = ['All', 'ZeroHedge', 'CNBC Markets', 'Investing.com', 'MarketWatch', 'Bloomberg']
+  const BIST_SOURCES = ['All', 'Bloomberg HT', 'Anadolu Ajansı', 'Foreks Haber', 'KAP', 'Investing TR']
+  const sources = piyasa === 'global' ? GLOBAL_SOURCES : BIST_SOURCES
 
-  async function loadNews() {
-    const res = await fetch('/api/news')
+  async function loadNews(p: 'global' | 'bist' = piyasa) {
+    const res = await fetch(`/api/news?piyasa=${p}`)
     const data = await res.json()
     setNews(Array.isArray(data) ? data : [])
     setLoading(false)
+  }
+
+  async function handlePiyasaDegistir(p: 'global' | 'bist') {
+    setPiyasa(p)
+    setFilter('All')
+    setLoading(true)
+    await loadNews(p)
   }
 
   async function handleRefresh() {
@@ -319,7 +329,7 @@ export default function Home() {
     try {
       const res = await fetch('/api/analyze', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: item.id, title: item.title, link: item.link, summary: item.summary }),
+        body: JSON.stringify({ id: item.id, title: item.title, link: item.link, summary: item.summary, piyasa_tipi: item.piyasa }),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const { analysis } = await res.json()
@@ -345,7 +355,7 @@ export default function Home() {
     }
   }
 
-  useEffect(() => { loadNews() }, [])
+  useEffect(() => { loadNews('global') }, [])
 
   const filtered = filter === 'All' ? news : news.filter(n => n.source === filter)
 
@@ -355,9 +365,13 @@ export default function Home() {
     <div style={s.container}>
       <div style={s.header}>
         <h1 style={s.title}>📈 TradeNews</h1>
-        <button onClick={handleRefresh} disabled={refreshing} style={s.refreshBtn}>
-          {refreshing ? 'Çekiliyor...' : '🔄 Yenile'}
-        </button>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <button onClick={() => handlePiyasaDegistir('global')} style={{ ...s.piyasaBtn, ...(piyasa === 'global' ? s.piyasaActive : {}) }}>🌍 Global</button>
+          <button onClick={() => handlePiyasaDegistir('bist')} style={{ ...s.piyasaBtn, ...(piyasa === 'bist' ? s.piyasaBistActive : {}) }}>🇹🇷 BIST30</button>
+          <button onClick={handleRefresh} disabled={refreshing} style={s.refreshBtn}>
+            {refreshing ? 'Çekiliyor...' : '🔄 Yenile'}
+          </button>
+        </div>
       </div>
 
       <div style={s.filters}>
@@ -447,6 +461,9 @@ const s: Record<string, React.CSSProperties> = {
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
   title: { margin: 0, fontSize: 24, color: '#fff' },
   refreshBtn: { padding: '8px 16px', background: '#1d9bf0', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer', fontSize: 14 },
+  piyasaBtn: { padding: '7px 16px', background: '#1e1e1e', color: '#aaa', border: '1px solid #333', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600 },
+  piyasaActive: { background: '#1d9bf022', color: '#1d9bf0', borderColor: '#1d9bf0' },
+  piyasaBistActive: { background: '#e53e3e22', color: '#fc8181', borderColor: '#e53e3e' },
   filters: { display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 },
   filterBtn: { padding: '4px 12px', background: '#1e1e1e', color: '#aaa', border: '1px solid #333', borderRadius: 20, cursor: 'pointer', fontSize: 12 },
   filterActive: { background: '#1d9bf0', color: '#fff', borderColor: '#1d9bf0' },

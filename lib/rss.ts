@@ -6,14 +6,23 @@ export interface NewsItem {
   pubDate: string
   summary?: string
   analysis?: string
+  piyasa: 'global' | 'bist'
 }
 
-const FEEDS = [
+const GLOBAL_FEEDS = [
   { url: 'https://feeds.feedburner.com/zerohedge/feed', name: 'ZeroHedge' },
   { url: 'https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114', name: 'CNBC Markets' },
   { url: 'https://www.investing.com/rss/news.rss', name: 'Investing.com' },
   { url: 'https://feeds.marketwatch.com/marketwatch/topstories', name: 'MarketWatch' },
   { url: 'https://feeds.bloomberg.com/markets/news.rss', name: 'Bloomberg' },
+]
+
+const BIST_FEEDS = [
+  { url: 'https://www.bloomberght.com/rss', name: 'Bloomberg HT' },
+  { url: 'https://www.aa.com.tr/tr/rss/default?cat=ekonomi', name: 'Anadolu Ajansı' },
+  { url: 'https://www.foreks.com/rss/haberler', name: 'Foreks Haber' },
+  { url: 'https://www.kap.org.tr/tr/rss/bildirimler', name: 'KAP' },
+  { url: 'https://tr.investing.com/rss/news.rss', name: 'Investing TR' },
 ]
 
 function decodeEntities(str: string): string {
@@ -39,7 +48,7 @@ async function fetchRSS(url: string): Promise<string | null> {
   }
 }
 
-function parseRSSItems(xml: string, source: string): NewsItem[] {
+function parseRSSItems(xml: string, source: string, piyasa: 'global' | 'bist' = 'global'): NewsItem[] {
   const items: NewsItem[] = []
   const itemMatches = xml.matchAll(/<item>([\s\S]*?)<\/item>/g)
 
@@ -76,31 +85,33 @@ function parseRSSItems(xml: string, source: string): NewsItem[] {
       id = Buffer.from(raw).toString('base64').replace(/[^a-zA-Z0-9]/g, '').slice(-24)
     }
     if (!id) id = Math.random().toString(36).slice(2)
-    items.push({ id, source, title, link, pubDate, summary: summary || undefined })
+    items.push({ id, source, title, link, pubDate, summary: summary || undefined, piyasa })
   }
 
   return items.slice(0, 15)
 }
 
-export async function fetchAllFeeds(): Promise<NewsItem[]> {
-  const fetches = FEEDS.map(async ({ url, name }) => {
+async function fetchFeeds(feeds: typeof GLOBAL_FEEDS, piyasa: 'global' | 'bist'): Promise<NewsItem[]> {
+  const fetches = feeds.map(async ({ url, name }) => {
     const xml = await fetchRSS(url)
-    if (!xml) {
-      console.warn(`Could not fetch ${name}`)
-      return []
-    }
+    if (!xml) { console.warn(`Could not fetch ${name}`); return [] }
     console.log(`Fetched ${name}`)
-    return parseRSSItems(xml, name)
+    return parseRSSItems(xml, name, piyasa)
   })
-
   const settled = await Promise.allSettled(fetches)
   const results: NewsItem[] = []
-
   for (const r of settled) {
     if (r.status === 'fulfilled') results.push(...r.value)
   }
+  return results
+}
 
-  return results.sort(
+export async function fetchAllFeeds(): Promise<NewsItem[]> {
+  const [global, bist] = await Promise.all([
+    fetchFeeds(GLOBAL_FEEDS, 'global'),
+    fetchFeeds(BIST_FEEDS, 'bist'),
+  ])
+  return [...global, ...bist].sort(
     (a, b) => new Date(b.pubDate).getTime() - new Date(a.pubDate).getTime()
   )
 }
