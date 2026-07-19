@@ -45,7 +45,7 @@ export async function saveNews(items: NewsItem[]): Promise<number> {
 export async function getNews(piyasa?: 'global' | 'bist'): Promise<NewsItem[]> {
   const all = (await kvGet<NewsItem[]>(NEWS_KEY)) ?? []
   if (!piyasa) return all
-  return all.filter(n => n.piyasa === piyasa)
+  return all.filter(n => (n.piyasa ?? 'global') === piyasa)
 }
 
 export async function updateAnalysis(id: string, analysis: string): Promise<void> {
