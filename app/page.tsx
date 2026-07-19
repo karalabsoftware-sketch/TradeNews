@@ -8,13 +8,17 @@ interface Analiz {
   etkilenen_sektorler: string[]; etkilenen_enstrumanlar: Enstruman[]; risk_puani: number
 }
 interface Sinyal {
-  sinyal: string
-  temel_gerekcesi: string
-  teknik_gerekcesi: string
-  celiksi_aciklama: string
-  stop_loss: number
-  direnc_hedef: number
-  ozet_karar: string
+  sinyal_durumu: string
+  guven_skoru: number
+  temel_analiz_ozet: string
+  teknik_analiz_ozet: string
+  strateji: {
+    aksiyon: string
+    giris_bolgesi: string
+    hedef_fiyat: string
+    stop_loss: string
+  }
+  celiski_uyarisi: string
 }
 
 interface TeknikAnaliz {
@@ -106,47 +110,77 @@ function AnalizKart({ analiz }: { analiz: Analiz }) {
 
 function SinyalPanel({ sinyal }: { sinyal: Sinyal }) {
   const renkMap: Record<string, string> = {
-    'Güçlü Al': '#00e676', 'Temkinli Al': '#69f0ae', 'Nötr-Bekle': '#ffc107',
-    'Temkinli Sat': '#ff7043', 'Güçlü Sat': '#f44336',
+    'GUCLU_AL': '#00e676', 'TEMKINLI_AL': '#69f0ae', 'NÖTR_BEKLE': '#ffc107',
+    'TEMKINLI_SAT': '#ff7043', 'GUCLU_SAT': '#f44336',
   }
-  const ikonMap: Record<string, string> = {
-    'Güçlü Al': '🚀', 'Temkinli Al': '📈', 'Nötr-Bekle': '⏸️',
-    'Temkinli Sat': '📉', 'Güçlü Sat': '🔴',
+  const etiketMap: Record<string, string> = {
+    'GUCLU_AL': '🚀 Güçlü Al', 'TEMKINLI_AL': '📈 Temkinli Al', 'NÖTR_BEKLE': '⏸️ Nötr / Bekle',
+    'TEMKINLI_SAT': '📉 Temkinli Sat', 'GUCLU_SAT': '🔴 Güçlü Sat',
   }
-  const renk = renkMap[sinyal.sinyal] ?? '#aaa'
-  const ikon = ikonMap[sinyal.sinyal] ?? '❓'
+  const renk = renkMap[sinyal.sinyal_durumu] ?? '#aaa'
+  const etiket = etiketMap[sinyal.sinyal_durumu] ?? sinyal.sinyal_durumu
+  const skor = Math.min(Math.max(sinyal.guven_skoru, 0), 100)
+  const skorRenk = skor >= 75 ? '#00e676' : skor >= 55 ? '#ffc107' : '#f44336'
+  const circumference = 2 * Math.PI * 28
+  const dashOffset = circumference * (1 - skor / 100)
+
   return (
-    <div style={{ ...s.sinyalBox, borderColor: renk + '55', background: renk + '0d' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-        <span style={{ fontSize: 22 }}>{ikon}</span>
-        <span style={{ fontSize: 18, fontWeight: 700, color: renk }}>{sinyal.sinyal}</span>
-        <span style={{ fontSize: 11, color: '#888', marginLeft: 'auto' }}>Ağırlıklı Karar Matrisi</span>
+    <div style={{ ...s.sinyalBox, borderColor: renk + '55', background: renk + '0a' }}>
+      {/* Başlık satırı */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+        <span style={{ fontSize: 20, fontWeight: 800, color: renk, letterSpacing: 0.5 }}>{etiket}</span>
+        <span style={{ fontSize: 11, color: '#555', marginLeft: 'auto' }}>Ağırlıklı Karar Matrisi</span>
+        {/* Dairesel güven skoru */}
+        <div style={{ position: 'relative', width: 64, height: 64, flexShrink: 0 }}>
+          <svg width="64" height="64" style={{ transform: 'rotate(-90deg)' }}>
+            <circle cx="32" cy="32" r="28" fill="none" stroke="#2a2a2a" strokeWidth="5" />
+            <circle cx="32" cy="32" r="28" fill="none" stroke={skorRenk} strokeWidth="5"
+              strokeDasharray={circumference} strokeDashoffset={dashOffset}
+              strokeLinecap="round" />
+          </svg>
+          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: skorRenk, lineHeight: 1 }}>{skor}</span>
+            <span style={{ fontSize: 9, color: '#666' }}>GÜVEN</span>
+          </div>
+        </div>
       </div>
-      <p style={{ fontSize: 13, color: '#ddd', lineHeight: 1.6, margin: '0 0 8px' }}>{sinyal.ozet_karar}</p>
+
+      {/* Neden bu sinyal - 2 kolon */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
         <div style={s.sinyalDetay}>
-          <div style={{ fontSize: 11, color: '#8b949e', marginBottom: 3 }}>📰 Temel Gerekçe</div>
-          <div style={{ fontSize: 12, color: '#ccc', lineHeight: 1.5 }}>{sinyal.temel_gerekcesi}</div>
+          <div style={{ fontSize: 11, color: '#8b949e', marginBottom: 4 }}>📰 Temel Analiz</div>
+          <div style={{ fontSize: 12, color: '#ccc', lineHeight: 1.6 }}>{sinyal.temel_analiz_ozet}</div>
         </div>
         <div style={s.sinyalDetay}>
-          <div style={{ fontSize: 11, color: '#8b949e', marginBottom: 3 }}>📊 Teknik Gerekçe</div>
-          <div style={{ fontSize: 12, color: '#ccc', lineHeight: 1.5 }}>{sinyal.teknik_gerekcesi}</div>
+          <div style={{ fontSize: 11, color: '#8b949e', marginBottom: 4 }}>📊 Teknik Analiz</div>
+          <div style={{ fontSize: 12, color: '#ccc', lineHeight: 1.6 }}>{sinyal.teknik_analiz_ozet}</div>
         </div>
       </div>
-      {sinyal.celiksi_aciklama && (
-        <div style={{ ...s.sinyalDetay, borderColor: '#ffc10744', background: '#ffc1070d', marginBottom: 8 }}>
-          <div style={{ fontSize: 11, color: '#ffc107', marginBottom: 3 }}>⚠️ Çelişki Açıklaması</div>
-          <div style={{ fontSize: 12, color: '#ccc', lineHeight: 1.5 }}>{sinyal.celiksi_aciklama}</div>
+
+      {/* Çelişki uyarısı */}
+      {sinyal.celiski_uyarisi && (
+        <div style={{ ...s.sinyalDetay, borderColor: '#ffc10755', background: '#ffc1070d', marginBottom: 8 }}>
+          <div style={{ fontSize: 11, color: '#ffc107', marginBottom: 3 }}>⚠️ Çelişki Uyarısı</div>
+          <div style={{ fontSize: 12, color: '#ccc', lineHeight: 1.5 }}>{sinyal.celiski_uyarisi}</div>
         </div>
       )}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <div style={s.seviyeKart}>
-          <span style={{ fontSize: 11, color: '#f44336' }}>🛑 Stop-Loss</span>
-          <span style={{ fontSize: 14, fontWeight: 700, color: '#f44336' }}>{sinyal.stop_loss}</span>
-        </div>
-        <div style={s.seviyeKart}>
-          <span style={{ fontSize: 11, color: '#4caf50' }}>🎯 Direnç / Hedef</span>
-          <span style={{ fontSize: 14, fontWeight: 700, color: '#4caf50' }}>{sinyal.direnc_hedef}</span>
+
+      {/* Strateji kartı */}
+      <div style={{ background: '#0d1117', border: '1px solid #21262d', borderRadius: 8, padding: '10px 14px' }}>
+        <div style={{ fontSize: 11, color: '#8b949e', marginBottom: 8, fontWeight: 600 }}>STRATEJİ — {sinyal.strateji.aksiyon}</div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div style={s.stratejiKart}>
+            <span style={{ fontSize: 10, color: '#8b949e' }}>🚪 Giriş Bölgesi</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#fff' }}>{sinyal.strateji.giris_bolgesi}</span>
+          </div>
+          <div style={s.stratejiKart}>
+            <span style={{ fontSize: 10, color: '#4caf50' }}>🎯 Hedef Fiyat</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#4caf50' }}>{sinyal.strateji.hedef_fiyat}</span>
+          </div>
+          <div style={s.stratejiKart}>
+            <span style={{ fontSize: 10, color: '#f44336' }}>🛑 Stop-Loss</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#f44336' }}>{sinyal.strateji.stop_loss}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -422,4 +456,5 @@ const s: Record<string, React.CSSProperties> = {
   senaryoKart: { flex: 1, background: '#161b22', border: '1px solid #21262d', borderRadius: 8, padding: '10px 12px' },
   sinyalBox: { border: '1px solid', borderRadius: 10, padding: '14px', marginTop: 10, marginBottom: 4 },
   sinyalDetay: { background: '#161b22', border: '1px solid #21262d', borderRadius: 8, padding: '10px 12px' },
+  stratejiKart: { display: 'flex', flexDirection: 'column', gap: 3, background: '#161b22', border: '1px solid #21262d', borderRadius: 8, padding: '8px 12px', flex: 1, minWidth: 110 },
 }
