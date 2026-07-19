@@ -31,15 +31,16 @@ function parseJSON<T>(raw: string): T | null {
 }
 
 function RiskBar({ puan, max = 5 }: { puan: number; max?: number }) {
-  const colors = ['', '#4caf50', '#8bc34a', '#ffc107', '#ff9800', '#f44336', '#f44336', '#f44336', '#f44336', '#f44336', '#f44336']
-  const c = colors[Math.min(puan, colors.length - 1)]
+  const clamped = Math.min(Math.max(Math.round(puan), 1), max)
+  const colors = ['', '#4caf50', '#8bc34a', '#ffc107', '#ff9800', '#f44336']
+  const c = colors[Math.min(clamped, colors.length - 1)]
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
       <span style={{ fontSize: 11, color: '#888' }}>Risk:</span>
       {Array.from({ length: max }, (_, i) => (
-        <div key={i} style={{ width: 10, height: 10, borderRadius: 2, background: i < puan ? c : '#333' }} />
+        <div key={i} style={{ width: 10, height: 10, borderRadius: 2, background: i < clamped ? c : '#333' }} />
       ))}
-      <span style={{ fontSize: 11, color: c }}>{puan}/{max}</span>
+      <span style={{ fontSize: 11, color: c }}>{clamped}/{max}</span>
     </div>
   )
 }
@@ -261,39 +262,47 @@ export default function Home() {
                 </button>
               )}
 
-              {analiz && !teknik?.data && (
-                <div style={{ marginTop: 8, display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                  {analiz.etkilenen_enstrumanlar?.map(e => (
-                    <button key={e.enstruman_adi} onClick={() => handleTeknikAnaliz(item.id, e.enstruman_adi)}
-                      disabled={teknik?.loading} style={s.teknikBtn}>
-                      📊 {e.enstruman_adi} Teknik Analiz
-                    </button>
-                  ))}
-                  <div style={{ display: 'flex', gap: 4 }}>
-                    <input
-                      placeholder="Manuel ticker (AAPL, THYAO...)"
-                      value={manuelTicker[item.id] ?? ''}
-                      onChange={e => setManuelTicker(prev => ({ ...prev, [item.id]: e.target.value }))}
-                      onKeyDown={e => e.key === 'Enter' && handleTeknikAnaliz(item.id, manuelTicker[item.id] ?? '')}
-                      style={s.tickerInput}
+              {analiz && (
+                <div style={{ marginTop: 8 }}>
+                  {!teknik?.data && (
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}>
+                      {analiz.etkilenen_enstrumanlar?.map(e => (
+                        <button key={e.enstruman_adi} onClick={() => handleTeknikAnaliz(item.id, e.enstruman_adi)}
+                          disabled={teknik?.loading} style={s.teknikBtn}>
+                          📊 {e.enstruman_adi}
+                        </button>
+                      ))}
+                      <div style={{ display: 'flex', gap: 4 }}>
+                        <input
+                          placeholder="Manuel ticker (AAPL, THYAO...)"
+                          value={manuelTicker[item.id] ?? ''}
+                          onChange={e => setManuelTicker(prev => ({ ...prev, [item.id]: e.target.value }))}
+                          onKeyDown={e => e.key === 'Enter' && handleTeknikAnaliz(item.id, manuelTicker[item.id] ?? '')}
+                          style={s.tickerInput}
+                        />
+                        <button onClick={() => handleTeknikAnaliz(item.id, manuelTicker[item.id] ?? '')}
+                          disabled={teknik?.loading || !manuelTicker[item.id]} style={s.teknikBtn}>
+                          {teknik?.loading ? '⏳' : '📊'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {teknik?.loading && <div style={{ fontSize: 12, color: '#888' }}>⏳ Teknik analiz hesaplanıyor...</div>}
+
+                  {teknik?.data && (
+                    <TeknikAnalizPanel
+                      ticker={teknik.ticker}
+                      teknikVeri={teknik.data.teknikVeri}
+                      analiz={teknik.data.analiz}
+                      onClose={() => setTeknikState(prev => { const n = { ...prev }; delete n[item.id]; return n })}
                     />
-                    <button onClick={() => handleTeknikAnaliz(item.id, manuelTicker[item.id] ?? '')}
-                      disabled={teknik?.loading || !manuelTicker[item.id]} style={s.teknikBtn}>
-                      {teknik?.loading ? '⏳' : '📊'}
-                    </button>
-                  </div>
+                  )}
+
+                  {!teknik?.loading && !teknik?.data && teknik !== undefined && (
+                    <div style={{ fontSize: 12, color: '#f44336' }}>⚠ Teknik veri alınamadı. Ticker formatını kontrol et (örn: THYAO, BTC-USD, GC=F)</div>
+                  )}
                 </div>
-              )}
-
-              {teknik?.loading && <div style={{ fontSize: 12, color: '#888', marginTop: 8 }}>⏳ Teknik analiz hesaplanıyor...</div>}
-
-              {teknik?.data && (
-                <TeknikAnalizPanel
-                  ticker={teknik.ticker}
-                  teknikVeri={teknik.data.teknikVeri}
-                  analiz={teknik.data.analiz}
-                  onClose={() => setTeknikState(prev => { const n = { ...prev }; delete n[item.id]; return n })}
-                />
               )}
             </div>
           )

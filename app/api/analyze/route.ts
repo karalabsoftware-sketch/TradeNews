@@ -72,7 +72,9 @@ Yukarıdaki haberi analiz et ve aşağıdaki JSON şablonuna birebir uyarak yan�
     }
   ],
   "risk_puani": 3
-}`,
+}
+
+Not: risk_puani 1-5 arası tam sayı olmalı (1: Çok Düşük Risk, 5: Çok Yüksek Risk).`,
         },
       ],
       max_tokens: 600,
