@@ -45,15 +45,16 @@ export async function POST(req: NextRequest) {
     ? 'PIYASA: BIST30/TL — Türkiye makro dinamikleri, TCMB faizi, TL kuru öncelikli. BIST30 hisselerini tercih et.'
     : 'PIYASA: GLOBAL/USD — Fed politikası, küresel likidite öncelikli.'
 
-  const systemPrompt = `Sen finansal bir analistsin. Haber metninden ETKİLENEN SPESİFİK FİNANSAL ENSTRÜMANLARI tespit etmek tek görevin.
+  const systemPrompt = `Sen finansal bir analistsin. Haber metnini analiz edip YALNIZCA haberde ADI GEÇEN veya haberin DOĞRUDAN ETKİLEDİĞİ finansal enstrümanları tespit edeceksin.
 
 ZORUNLU KURALLAR:
-- Haberde adı geçen veya doğrudan etkilenen spesifik şirket/emtia/kripto sembollerini yaz
-- Örnekler: L'Oreal haberi → OR.PA | Apple haberi → AAPL | Altın haberi → GC=F | Bitcoin haberi → BTC-USD | THY haberi → THYAO
-- USDTRY, EUR/USD gibi döviz kurları SADECE haber doğrudan kur/para politikası hakkındaysa ekle
-- "Hisse Senetleri", "Kripto Para", "Emtia", "Döviz Kuru" gibi genel kategori isimleri KESİNLİKLE YASAK
-- Haberde geçmeyen enstrümanları EKLEME
-- Yanıtı Türkçe, geçerli JSON olarak döndür, başka metin ekleme`
+1. Haberde adı geçen şirket varsa → o şirketin borsa sembolünü yaz (L'Oreal → OR.PA, Apple → AAPL, Garanti → GARAN)
+2. Haberde adı geçen emtia varsa → sembolünü yaz (altın → GC=F, petrol → CL=F, bitcoin → BTC-USD)
+3. Haber doğrudan döviz/faiz politikası hakkındaysa → döviz sembolü ekle (USDTRY=X, EURUSD=X)
+4. Haber genel ekonomi, siyaset, doğal afet, sosyal konu ise → etkilenen_enstrumanlar BOŞ ARRAY döndür []
+5. "Hisse Senetleri", "Kripto Para", "Emtia Piyasası", "Döviz Kuru" gibi KATEGORİ İSİMLERİ KESİNLİKLE YASAK
+6. Haberde geçmeyen, sadece sektörel çıkarım yaptığın enstrümanları EKLEME — emin değilsen EKLEME
+7. Yanıtı Türkçe geçerli JSON olarak döndür, başka metin ekleme`
 
   const userPrompt = `${piyasaBaglami}
 
@@ -67,12 +68,12 @@ JSON:
   "haber_ozeti": "Piyasa etkisini 2 cümlede özetle.",
   "piyasa_etkisi": "Pozitif / Negatif / Nötr",
   "etki_suresi": "Kısa Vadeli (Günlük/Haftalık) veya Orta-Uzun Vadeli",
-  "etkilenen_sektorler": ["Spesifik sektör adı"],
+  "etkilenen_sektorler": ["Haberde geçen spesifik sektör, yoksa boş array"],
   "etkilenen_enstrumanlar": [
     {
-      "enstruman_adi": "Spesifik sembol (OR.PA, THYAO, GC=F, BTC-USD vb.)",
+      "enstruman_adi": "Sembol — SADECE haberde adı geçen veya doğrudan etkilenen enstrüman",
       "yonu": "Yukarı / Aşağı / Belirsiz",
-      "gerekce": "Haberdeki hangi bilgi bu enstrümanı etkiliyor."
+      "gerekce": "Haberin hangi cümlesi/verisi bu enstrümanı etkiliyor — somut gerekçe"
     }
   ],
   "risk_puani": 5
