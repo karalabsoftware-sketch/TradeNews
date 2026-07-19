@@ -20,8 +20,9 @@ const GLOBAL_FEEDS = [
 const BIST_FEEDS = [
   { url: 'https://www.bloomberght.com/rss', name: 'Bloomberg HT' },
   { url: 'https://www.aa.com.tr/tr/rss/default?cat=ekonomi', name: 'Anadolu Ajansı' },
-  { url: 'https://www.foreks.com/rss/haberler', name: 'Foreks Haber' },
-  { url: 'https://www.kap.org.tr/tr/rss/bildirimler', name: 'KAP' },
+  { url: 'https://www.haberturk.com/rss/ekonomi.xml', name: 'Haberturk Ekonomi' },
+  { url: 'https://www.dunya.com/rss', name: 'Dünya Gazetesi' },
+  { url: 'https://www.ekonomim.com/rss', name: 'Ekonomim' },
   { url: 'https://tr.investing.com/rss/news.rss', name: 'Investing TR' },
 ]
 

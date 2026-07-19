@@ -300,7 +300,7 @@ export default function Home() {
   const [manuelTicker, setManuelTicker] = useState<Record<string, string>>({})
 
   const GLOBAL_SOURCES = ['All', 'ZeroHedge', 'CNBC Markets', 'Investing.com', 'MarketWatch', 'Bloomberg']
-  const BIST_SOURCES = ['All', 'Bloomberg HT', 'Anadolu Ajansı', 'Foreks Haber', 'KAP', 'Investing TR']
+  const BIST_SOURCES = ['All', 'Bloomberg HT', 'Anadolu Ajansı', 'Haberturk Ekonomi', 'Dünya Gazetesi', 'Ekonomim', 'Investing TR']
   const sources = piyasa === 'global' ? GLOBAL_SOURCES : BIST_SOURCES
 
   async function loadNews(p: 'global' | 'bist' = piyasa) {
