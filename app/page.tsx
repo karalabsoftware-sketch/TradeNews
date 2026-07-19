@@ -30,10 +30,9 @@ function parseJSON<T>(raw: string): T | null {
   try { return JSON.parse(raw) } catch { return null }
 }
 
-function RiskBar({ puan, max = 5 }: { puan: number; max?: number }) {
+function RiskBar({ puan, max = 10 }: { puan: number; max?: number }) {
   const clamped = Math.min(Math.max(Math.round(puan), 1), max)
-  const colors = ['', '#4caf50', '#8bc34a', '#ffc107', '#ff9800', '#f44336']
-  const c = colors[Math.min(clamped, colors.length - 1)]
+  const c = clamped <= 3 ? '#4caf50' : clamped <= 5 ? '#ffc107' : clamped <= 7 ? '#ff9800' : '#f44336'
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
       <span style={{ fontSize: 11, color: '#888' }}>Risk:</span>
