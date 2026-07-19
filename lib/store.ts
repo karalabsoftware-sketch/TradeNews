@@ -32,12 +32,19 @@ async function kvSet(key: string, value: unknown): Promise<void> {
 
 export async function saveNews(items: NewsItem[]): Promise<number> {
   const existing: NewsItem[] = (await kvGet<NewsItem[]>(NEWS_KEY)) ?? []
-  const existingIds = new Set(existing.map((n) => n.id))
+  const incomingMap = new Map(items.map(n => [n.id, n]))
 
-  const newItems = items.filter((item) => !existingIds.has(item.id))
-  if (newItems.length === 0) return 0
+  // Mevcut kayitlarin piyasa alanini guncelle
+  const updated = existing.map(n => {
+    const fresh = incomingMap.get(n.id)
+    if (fresh && !n.piyasa) return { ...n, piyasa: fresh.piyasa }
+    return n
+  })
 
-  const merged = [...newItems, ...existing].slice(0, MAX_ITEMS)
+  const existingIds = new Set(existing.map(n => n.id))
+  const newItems = items.filter(n => !existingIds.has(n.id))
+
+  const merged = [...newItems, ...updated].slice(0, MAX_ITEMS)
   await kvSet(NEWS_KEY, merged)
   return newItems.length
 }
