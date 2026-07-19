@@ -7,6 +7,16 @@ interface Analiz {
   haber_ozeti: string; piyasa_etkisi: string; etki_suresi: string
   etkilenen_sektorler: string[]; etkilenen_enstrumanlar: Enstruman[]; risk_puani: number
 }
+interface Sinyal {
+  sinyal: string
+  temel_gerekcesi: string
+  teknik_gerekcesi: string
+  celiksi_aciklama: string
+  stop_loss: number
+  direnc_hedef: number
+  ozet_karar: string
+}
+
 interface TeknikAnaliz {
   genel_gorunum: string; ozet: string; rsi_yorum: string; macd_yorum: string
   hareketli_ortalama_yorum: string; bollinger_yorum: string; hacim_yorum: string
@@ -25,6 +35,15 @@ interface NewsItem {
   id: string; source: string; title: string; link: string
   pubDate: string; summary?: string; analysis?: string
 }
+
+const TICKER_LISTESI = [
+  { grup: 'Kripto', items: [['BTC-USD','Bitcoin (BTC)'],['ETH-USD','Ethereum (ETH)'],['SOL-USD','Solana (SOL)'],['BNB-USD','BNB'],['XRP-USD','Ripple (XRP)'],['DOGE-USD','Dogecoin'],['AVAX-USD','Avalanche'],['LTC-USD','Litecoin']] },
+  { grup: 'Emtia', items: [['GC=F','Altın'],['SI=F','Gümüş'],['CL=F','Ham Petrol (WTI)'],['BZ=F','Brent Petrol'],['NG=F','Doğal Gaz'],['HG=F','Bakır'],['PL=F','Platin']] },
+  { grup: 'Döviz', items: [['USDTRY=X','USD/TRY'],['EURTRY=X','EUR/TRY'],['EURUSD=X','EUR/USD'],['GBPUSD=X','GBP/USD'],['JPY=X','USD/JPY'],['CHF=X','USD/CHF'],['RUB=X','USD/RUB'],['CNY=X','USD/CNY'],['GBPTRY=X','GBP/TRY']] },
+  { grup: 'Endeks', items: [['^GSPC','S&P 500'],['^IXIC','NASDAQ'],['^NDX','NASDAQ 100'],['^DJI','Dow Jones'],['^VIX','VIX'],['^RUT','Russell 2000'],['XU100.IS','BIST 100']] },
+  { grup: 'BIST', items: [['THYAO.IS','Türk Hava Yolları'],['GARAN.IS','Garanti BBVA'],['AKBNK.IS','Akbank'],['EREGL.IS','Ereğli Demir'],['SISE.IS','Şişecam'],['KCHOL.IS','Koç Holding'],['BIMAS.IS','BİM'],['ASELS.IS','Aselsan'],['TUPRS.IS','Tüpraş'],['PGSUS.IS','Pegasus']] },
+  { grup: 'ABD Hisseleri', items: [['AAPL','Apple'],['MSFT','Microsoft'],['NVDA','NVIDIA'],['GOOGL','Alphabet'],['AMZN','Amazon'],['TSLA','Tesla'],['META','Meta'],['NFLX','Netflix']] },
+] as const
 
 function parseJSON<T>(raw: string): T | null {
   try { return JSON.parse(raw) } catch { return null }
@@ -81,6 +100,55 @@ function AnalizKart({ analiz }: { analiz: Analiz }) {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+function SinyalPanel({ sinyal }: { sinyal: Sinyal }) {
+  const renkMap: Record<string, string> = {
+    'Güçlü Al': '#00e676', 'Temkinli Al': '#69f0ae', 'Nötr-Bekle': '#ffc107',
+    'Temkinli Sat': '#ff7043', 'Güçlü Sat': '#f44336',
+  }
+  const ikonMap: Record<string, string> = {
+    'Güçlü Al': '🚀', 'Temkinli Al': '📈', 'Nötr-Bekle': '⏸️',
+    'Temkinli Sat': '📉', 'Güçlü Sat': '🔴',
+  }
+  const renk = renkMap[sinyal.sinyal] ?? '#aaa'
+  const ikon = ikonMap[sinyal.sinyal] ?? '❓'
+  return (
+    <div style={{ ...s.sinyalBox, borderColor: renk + '55', background: renk + '0d' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+        <span style={{ fontSize: 22 }}>{ikon}</span>
+        <span style={{ fontSize: 18, fontWeight: 700, color: renk }}>{sinyal.sinyal}</span>
+        <span style={{ fontSize: 11, color: '#888', marginLeft: 'auto' }}>Ağırlıklı Karar Matrisi</span>
+      </div>
+      <p style={{ fontSize: 13, color: '#ddd', lineHeight: 1.6, margin: '0 0 8px' }}>{sinyal.ozet_karar}</p>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+        <div style={s.sinyalDetay}>
+          <div style={{ fontSize: 11, color: '#8b949e', marginBottom: 3 }}>📰 Temel Gerekçe</div>
+          <div style={{ fontSize: 12, color: '#ccc', lineHeight: 1.5 }}>{sinyal.temel_gerekcesi}</div>
+        </div>
+        <div style={s.sinyalDetay}>
+          <div style={{ fontSize: 11, color: '#8b949e', marginBottom: 3 }}>📊 Teknik Gerekçe</div>
+          <div style={{ fontSize: 12, color: '#ccc', lineHeight: 1.5 }}>{sinyal.teknik_gerekcesi}</div>
+        </div>
+      </div>
+      {sinyal.celiksi_aciklama && (
+        <div style={{ ...s.sinyalDetay, borderColor: '#ffc10744', background: '#ffc1070d', marginBottom: 8 }}>
+          <div style={{ fontSize: 11, color: '#ffc107', marginBottom: 3 }}>⚠️ Çelişki Açıklaması</div>
+          <div style={{ fontSize: 12, color: '#ccc', lineHeight: 1.5 }}>{sinyal.celiksi_aciklama}</div>
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <div style={s.seviyeKart}>
+          <span style={{ fontSize: 11, color: '#f44336' }}>🛑 Stop-Loss</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#f44336' }}>{sinyal.stop_loss}</span>
+        </div>
+        <div style={s.seviyeKart}>
+          <span style={{ fontSize: 11, color: '#4caf50' }}>🎯 Direnç / Hedef</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: '#4caf50' }}>{sinyal.direnc_hedef}</span>
+        </div>
+      </div>
     </div>
   )
 }
@@ -177,7 +245,7 @@ export default function Home() {
   const [refreshing, setRefreshing] = useState(false)
   const [analyzingId, setAnalyzingId] = useState<string | null>(null)
   const [filter, setFilter] = useState('All')
-  const [teknikState, setTeknikState] = useState<Record<string, { loading: boolean; ticker: string; data?: { teknikVeri: TeknikVeri; analiz: TeknikAnaliz } }>>({})
+  const [teknikState, setTeknikState] = useState<Record<string, { loading: boolean; ticker: string; data?: { teknikVeri: TeknikVeri; analiz: TeknikAnaliz; sinyal?: Sinyal } }>>({})
   const [manuelTicker, setManuelTicker] = useState<Record<string, string>>({})
 
   const sources = ['All', 'ZeroHedge', 'CNBC Markets', 'Investing.com', 'MarketWatch', 'Bloomberg']
@@ -210,17 +278,17 @@ export default function Home() {
     setAnalyzingId(null)
   }
 
-  async function handleTeknikAnaliz(newsId: string, ticker: string) {
+  async function handleTeknikAnaliz(newsId: string, ticker: string, haberAnalizi?: Analiz) {
     if (!ticker.trim()) return
     setTeknikState(prev => ({ ...prev, [newsId]: { loading: true, ticker } }))
     try {
       const res = await fetch('/api/technical', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ticker }),
+        body: JSON.stringify({ ticker, haberAnalizi }),
       })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const data = await res.json()
-      setTeknikState(prev => ({ ...prev, [newsId]: { loading: false, ticker, data } }))
+      const { ticker: t, teknikVeri, analiz, sinyal } = await res.json()
+      setTeknikState(prev => ({ ...prev, [newsId]: { loading: false, ticker: t ?? ticker, data: { teknikVeri, analiz, sinyal } } }))
     } catch (e) {
       console.error('Technical error:', e)
       setTeknikState(prev => ({ ...prev, [newsId]: { loading: false, ticker } }))
@@ -276,7 +344,7 @@ export default function Home() {
                   {!teknik?.data && (
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}>
                       {somutEnstrumanlar.map(e => (
-                        <button key={e.enstruman_adi} onClick={() => handleTeknikAnaliz(item.id, e.enstruman_adi)}
+                        <button key={e.enstruman_adi} onClick={() => handleTeknikAnaliz(item.id, e.enstruman_adi, analiz ?? undefined)}
                           disabled={teknik?.loading} style={s.teknikBtn}>
                           📊 {e.enstruman_adi}
                         </button>
@@ -286,10 +354,10 @@ export default function Home() {
                           placeholder="Manuel ticker (AAPL, THYAO...)"
                           value={manuelTicker[item.id] ?? ''}
                           onChange={e => setManuelTicker(prev => ({ ...prev, [item.id]: e.target.value }))}
-                          onKeyDown={e => e.key === 'Enter' && handleTeknikAnaliz(item.id, manuelTicker[item.id] ?? '')}
+                          onKeyDown={e => e.key === 'Enter' && handleTeknikAnaliz(item.id, manuelTicker[item.id] ?? '', analiz ?? undefined)}
                           style={s.tickerInput}
                         />
-                        <button onClick={() => handleTeknikAnaliz(item.id, manuelTicker[item.id] ?? '')}
+                        <button onClick={() => handleTeknikAnaliz(item.id, manuelTicker[item.id] ?? '', analiz ?? undefined)}
                           disabled={teknik?.loading || !manuelTicker[item.id]} style={s.teknikBtn}>
                           {teknik?.loading ? '⏳' : '📊'}
                         </button>
@@ -300,12 +368,15 @@ export default function Home() {
                   {teknik?.loading && <div style={{ fontSize: 12, color: '#888' }}>⏳ Teknik analiz hesaplanıyor...</div>}
 
                   {teknik?.data && (
-                    <TeknikAnalizPanel
-                      ticker={teknik.ticker}
-                      teknikVeri={teknik.data.teknikVeri}
-                      analiz={teknik.data.analiz}
-                      onClose={() => setTeknikState(prev => { const n = { ...prev }; delete n[item.id]; return n })}
-                    />
+                    <>
+                      {teknik.data.sinyal && <SinyalPanel sinyal={teknik.data.sinyal} />}
+                      <TeknikAnalizPanel
+                        ticker={teknik.ticker}
+                        teknikVeri={teknik.data.teknikVeri}
+                        analiz={teknik.data.analiz}
+                        onClose={() => setTeknikState(prev => { const n = { ...prev }; delete n[item.id]; return n })}
+                      />
+                    </>
                   )}
 
                   {!teknik?.loading && !teknik?.data && teknik !== undefined && (
@@ -349,4 +420,6 @@ const s: Record<string, React.CSSProperties> = {
   indikatörAciklama: { fontSize: 11, color: '#8b949e', marginTop: 6, lineHeight: 1.5 },
   seviyeKart: { display: 'flex', flexDirection: 'column', gap: 2, background: '#161b22', border: '1px solid #21262d', borderRadius: 8, padding: '8px 12px', flex: 1, minWidth: 100 },
   senaryoKart: { flex: 1, background: '#161b22', border: '1px solid #21262d', borderRadius: 8, padding: '10px 12px' },
+  sinyalBox: { border: '1px solid', borderRadius: 10, padding: '14px', marginTop: 10, marginBottom: 4 },
+  sinyalDetay: { background: '#161b22', border: '1px solid #21262d', borderRadius: 8, padding: '10px 12px' },
 }
