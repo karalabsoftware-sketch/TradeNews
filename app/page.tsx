@@ -46,6 +46,12 @@ function RiskBar({ puan, max = 10 }: { puan: number; max?: number }) {
 
 function AnalizKart({ analiz }: { analiz: Analiz }) {
   const etkiRenk = analiz.piyasa_etkisi === 'Pozitif' ? '#4caf50' : analiz.piyasa_etkisi === 'Negatif' ? '#f44336' : '#ffc107'
+  // Genel kategori adlarını filtrele, sadece somut semboller kalsın
+  const GENEL_IFADELER = ['endeks', 'senet', 'piyasa', 'sektör', 'sektor', 'fon', 'tahvil', 'bono', 'para birimi', 'kripto para']
+  const somutEnstrumanlar = analiz.etkilenen_enstrumanlar?.filter(
+    e => !GENEL_IFADELER.some(k => e.enstruman_adi.toLowerCase().includes(k))
+  ) ?? []
+
   return (
     <div style={s.analizBox}>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8, alignItems: 'center' }}>
@@ -60,9 +66,9 @@ function AnalizKart({ analiz }: { analiz: Analiz }) {
           {analiz.etkilenen_sektorler.map(sec => <span key={sec} style={{ ...s.badge, background: '#1a2a3a', color: '#64b5f6', marginLeft: 4 }}>{sec}</span>)}
         </div>
       )}
-      {analiz.etkilenen_enstrumanlar?.length > 0 && (
+      {somutEnstrumanlar.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          {analiz.etkilenen_enstrumanlar.map((e, i) => (
+          {somutEnstrumanlar.map((e, i) => (
             <div key={i} style={s.enstrumanRow}>
               <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 2 }}>
                 <span style={{ fontWeight: 600, color: '#fff', fontSize: 13 }}>{e.enstruman_adi}</span>
@@ -247,6 +253,10 @@ export default function Home() {
         {filtered.map(item => {
           const analiz = item.analysis ? parseJSON<Analiz>(item.analysis) : null
           const teknik = teknikState[item.id]
+          const GENEL_IFADELER = ['endeks', 'senet', 'piyasa', 'sektör', 'sektor', 'fon', 'tahvil', 'bono', 'para birimi', 'kripto para']
+          const somutEnstrumanlar = analiz?.etkilenen_enstrumanlar?.filter(
+            e => !GENEL_IFADELER.some(k => e.enstruman_adi.toLowerCase().includes(k))
+          ) ?? []
           return (
             <div key={item.id} style={s.card}>
               <div style={s.cardHeader}>
@@ -265,7 +275,7 @@ export default function Home() {
                 <div style={{ marginTop: 8 }}>
                   {!teknik?.data && (
                     <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 6 }}>
-                      {analiz.etkilenen_enstrumanlar?.map(e => (
+                      {somutEnstrumanlar.map(e => (
                         <button key={e.enstruman_adi} onClick={() => handleTeknikAnaliz(item.id, e.enstruman_adi)}
                           disabled={teknik?.loading} style={s.teknikBtn}>
                           📊 {e.enstruman_adi}
