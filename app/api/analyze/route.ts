@@ -15,10 +15,8 @@ async function fetchArticleContent(url: string): Promise<string> {
     })
     if (!res.ok) return ''
     const html = await res.text()
-    // Meta description ve article paragraflarını çek
-    const metaDesc = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']{20,500})["']/i)?.[1] ?? ''
     const ogDesc = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']{20,500})["']/i)?.[1] ?? ''
-    // Paragraf metinlerini çek
+    const metaDesc = html.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']{20,500})["']/i)?.[1] ?? ''
     const paragraphs = [...html.matchAll(/<p[^>]*>([\s\S]{30,800}?)<\/p>/g)]
       .map(m => m[1].replace(/<[^>]+>/g, '').trim())
       .filter(p => p.length > 50)
@@ -34,28 +32,50 @@ export async function POST(req: NextRequest) {
   const { id, title, link, summary } = await req.json()
   if (!id || !title) return NextResponse.json({ error: 'Missing fields' }, { status: 400 })
 
-  // Önce URL'den içerik çekmeyi dene, olmazsa RSS summary kullan
   let content = ''
-  if (link) {
-    content = await fetchArticleContent(link)
-  }
+  if (link) content = await fetchArticleContent(link)
   if (!content && summary) content = summary
 
-  const prompt = content
-    ? `Başlık: ${title}\n\nİçerik: ${content}`
-    : `Başlık: ${title}`
+  const haberMetni = content ? `Başlık: ${title}\n\nİçerik: ${content}` : `Başlık: ${title}`
 
   let chat
   try {
     chat = await groq.chat.completions.create({
       model: process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
+      response_format: { type: 'json_object' },
       messages: [
         {
+          role: 'system',
+          content: `Sen kıdemli bir finansal analist ve ekonomi uzmanısın. Görevin, sana verilen haber metnini objektif, veri odaklı ve manipülasyondan uzak bir şekilde analiz etmektir.
+Kesinlikle genel geçer veya yuvarlak cümleler kurma. Yatırım tavsiyesi vermeden, haberin piyasalara, sektörlere ve spesifik finansal enstrümanlara (hisse, emtia, döviz vb.) olası etkilerini rasyonel gerekçelerle açıkla.
+Analiz raporunu her zaman Türkçe dilinde ve strictly geçerli bir JSON formatında döndür. JSON dışında hiçbir açıklama metni ekleme.`,
+        },
+        {
           role: 'user',
-          content: `Aşağıdaki finansal haberi Türkçe olarak analiz et. Şunları belirt:\n1. Haberin özeti (1 cümle)\n2. Hangi piyasa/varlık etkilenir (hisse, emtia, döviz, kripto vb. spesifik isim ver)\n3. Olası etki yönü (olumlu/olumsuz) ve sebebi\n\n${prompt}`,
+          content: `Analiz Edilecek Haber:
+"""
+${haberMetni}
+"""
+
+Yukarıdaki haberi analiz et ve aşağıdaki JSON şablonuna birebir uyarak yanıt ver:
+
+{
+  "haber_ozeti": "Haberin piyasaları ilgilendiren en kritik 2-3 cümlelik özeti.",
+  "piyasa_etkisi": "Pozitif / Negatif / Nötr",
+  "etki_suresi": "Kısa Vadeli (Günlük/Haftalık) veya Orta-Uzun Vadeli",
+  "etkilenen_sektorler": ["Sektör 1", "Sektör 2"],
+  "etkilenen_enstrumanlar": [
+    {
+      "enstruman_adi": "Hisse veya Emtia Kodu (Örn: THYAO, Altın)",
+      "yonu": "Yukarı / Aşağı / Belirsiz",
+      "gerekce": "Bu enstrümanın neden ve nasıl etkileneceğine dair kısa, mantıksal argüman."
+    }
+  ],
+  "risk_puani": 3
+}`,
         },
       ],
-      max_tokens: 300,
+      max_tokens: 600,
     })
   } catch (e: unknown) {
     const err = e as { status?: number; error?: unknown; message?: string }
@@ -63,8 +83,15 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Groq failed', detail: err.error }, { status: 500 })
   }
 
-  const analysis = chat.choices[0].message.content ?? ''
-  await updateAnalysis(id, analysis)
+  const raw = chat.choices[0].message.content ?? '{}'
+  let analysis: string
+  try {
+    JSON.parse(raw) // geçerli JSON mi kontrol et
+    analysis = raw
+  } catch {
+    analysis = JSON.stringify({ haber_ozeti: raw, piyasa_etkisi: 'Belirsiz', etki_suresi: '-', etkilenen_sektorler: [], etkilenen_enstrumanlar: [], risk_puani: 0 })
+  }
 
+  await updateAnalysis(id, analysis)
   return NextResponse.json({ analysis })
 }

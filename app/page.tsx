@@ -2,6 +2,21 @@
 
 import { useEffect, useState } from 'react'
 
+interface Enstruman {
+  enstruman_adi: string
+  yonu: string
+  gerekce: string
+}
+
+interface Analiz {
+  haber_ozeti: string
+  piyasa_etkisi: string
+  etki_suresi: string
+  etkilenen_sektorler: string[]
+  etkilenen_enstrumanlar: Enstruman[]
+  risk_puani: number
+}
+
 interface NewsItem {
   id: string
   source: string
@@ -10,6 +25,65 @@ interface NewsItem {
   pubDate: string
   summary?: string
   analysis?: string
+}
+
+function parseAnalysis(raw: string): Analiz | null {
+  try { return JSON.parse(raw) } catch { return null }
+}
+
+function RiskBar({ puan }: { puan: number }) {
+  const colors = ['', '#4caf50', '#8bc34a', '#ffc107', '#ff9800', '#f44336']
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ fontSize: 11, color: '#888' }}>Risk:</span>
+      {[1,2,3,4,5].map(i => (
+        <div key={i} style={{ width: 12, height: 12, borderRadius: 2, background: i <= puan ? colors[puan] : '#333' }} />
+      ))}
+      <span style={{ fontSize: 11, color: colors[puan] }}>{puan}/5</span>
+    </div>
+  )
+}
+
+function AnalizKart({ analiz }: { analiz: Analiz }) {
+  const etkiRenk = analiz.piyasa_etkisi === 'Pozitif' ? '#4caf50' : analiz.piyasa_etkisi === 'Negatif' ? '#f44336' : '#ffc107'
+  return (
+    <div style={styles.analizBox}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8, alignItems: 'center' }}>
+        <span style={{ ...styles.badge, background: etkiRenk + '22', color: etkiRenk, border: `1px solid ${etkiRenk}44` }}>
+          {analiz.piyasa_etkisi}
+        </span>
+        <span style={{ ...styles.badge, background: '#1e1e1e', color: '#aaa' }}>{analiz.etki_suresi}</span>
+        <RiskBar puan={analiz.risk_puani} />
+      </div>
+
+      <p style={{ fontSize: 13, color: '#ccc', lineHeight: 1.6, margin: '0 0 10px' }}>{analiz.haber_ozeti}</p>
+
+      {analiz.etkilenen_sektorler?.length > 0 && (
+        <div style={{ marginBottom: 8 }}>
+          <span style={{ fontSize: 11, color: '#888' }}>Etkilenen Sektörler: </span>
+          {analiz.etkilenen_sektorler.map(s => (
+            <span key={s} style={{ ...styles.badge, background: '#1a2a3a', color: '#64b5f6', marginLeft: 4 }}>{s}</span>
+          ))}
+        </div>
+      )}
+
+      {analiz.etkilenen_enstrumanlar?.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {analiz.etkilenen_enstrumanlar.map((e, i) => (
+            <div key={i} style={styles.enstrumanRow}>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 2 }}>
+                <span style={{ fontWeight: 600, color: '#fff', fontSize: 13 }}>{e.enstruman_adi}</span>
+                <span style={{ fontSize: 11, color: e.yonu === 'Yukarı' ? '#4caf50' : e.yonu === 'Aşağı' ? '#f44336' : '#ffc107' }}>
+                  {e.yonu === 'Yukarı' ? '▲' : e.yonu === 'Aşağı' ? '▼' : '◆'} {e.yonu}
+                </span>
+              </div>
+              <p style={{ fontSize: 12, color: '#999', margin: 0, lineHeight: 1.5 }}>{e.gerekce}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function Home() {
@@ -33,9 +107,7 @@ export default function Home() {
     try {
       await fetch('/api/refresh', { method: 'POST' })
       await loadNews()
-    } catch (e) {
-      console.error(e)
-    }
+    } catch (e) { console.error(e) }
     setRefreshing(false)
   }
 
@@ -50,9 +122,7 @@ export default function Home() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const { analysis } = await res.json()
       setNews((prev) => prev.map((n) => (n.id === item.id ? { ...n, analysis } : n)))
-    } catch (e) {
-      console.error('Analyze error:', e)
-    }
+    } catch (e) { console.error('Analyze error:', e) }
     setAnalyzingId(null)
   }
 
@@ -81,24 +151,27 @@ export default function Home() {
 
       <div style={styles.list}>
         {filtered.length === 0 && <p style={{ color: '#888' }}>Haber bulunamadı. Yenile butonuna bas.</p>}
-        {filtered.map((item) => (
-          <div key={item.id} style={styles.card}>
-            <div style={styles.cardHeader}>
-              <span style={styles.source}>{item.source}</span>
-              <span style={styles.date}>{new Date(item.pubDate).toLocaleString('tr-TR')}</span>
+        {filtered.map((item) => {
+          const analiz = item.analysis ? parseAnalysis(item.analysis) : null
+          return (
+            <div key={item.id} style={styles.card}>
+              <div style={styles.cardHeader}>
+                <span style={styles.source}>{item.source}</span>
+                <span style={styles.date}>{new Date(item.pubDate).toLocaleString('tr-TR')}</span>
+              </div>
+              <a href={item.link} target="_blank" rel="noreferrer" style={styles.titleLink}>
+                {item.title}
+              </a>
+              {analiz ? (
+                <AnalizKart analiz={analiz} />
+              ) : (
+                <button onClick={() => handleAnalyze(item)} disabled={analyzingId === item.id} style={styles.analyzeBtn}>
+                  {analyzingId === item.id ? '⏳ Analiz ediliyor...' : '🤖 AI Analiz'}
+                </button>
+              )}
             </div>
-            <a href={item.link} target="_blank" rel="noreferrer" style={styles.titleLink}>
-              {item.title}
-            </a>
-            {item.analysis ? (
-              <div style={styles.analysis}>🤖 {item.analysis}</div>
-            ) : (
-              <button onClick={() => handleAnalyze(item)} disabled={analyzingId === item.id} style={styles.analyzeBtn}>
-                {analyzingId === item.id ? 'Analiz ediliyor...' : '🤖 AI Analiz'}
-              </button>
-            )}
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )
@@ -119,6 +192,8 @@ const styles: Record<string, React.CSSProperties> = {
   source: { fontSize: 12, color: '#1d9bf0', fontWeight: 600 },
   date: { fontSize: 11, color: '#666' },
   titleLink: { display: 'block', color: '#e0e0e0', textDecoration: 'none', fontSize: 14, lineHeight: 1.5, marginBottom: 10 },
-  analysis: { fontSize: 13, color: '#a0c4a0', background: '#0d1f0d', borderRadius: 8, padding: '10px 12px', lineHeight: 1.6 },
   analyzeBtn: { padding: '6px 12px', background: '#1e1e1e', color: '#888', border: '1px solid #333', borderRadius: 6, cursor: 'pointer', fontSize: 12 },
+  analizBox: { background: '#111', border: '1px solid #2a2a2a', borderRadius: 8, padding: '12px 14px', marginTop: 4 },
+  badge: { fontSize: 11, padding: '2px 8px', borderRadius: 12, fontWeight: 600 },
+  enstrumanRow: { background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 6, padding: '8px 10px' },
 }
