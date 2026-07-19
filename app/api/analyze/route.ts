@@ -40,9 +40,43 @@ export async function POST(req: NextRequest) {
   if (!content && summary) content = summary
 
   const haberMetni = content ? `Başlık: ${title}\n\nİçerik: ${content}` : `Başlık: ${title}`
+
   const piyasaBaglami = isBist
-    ? `PIYASA_TIPI: BIST30 | PARA_BIRIMI: TL\nAnalizde Türkiye makroekonomik dinamiklerini (TCMB faiz politikası, enflasyon, TL kuru, yerel sektörel çarpanlar) ön planda tut. Etkilenen enstrümanlar için BIST30 hisselerini ve TL bazlı varlıkları önceliklendir.`
-    : `PIYASA_TIPI: GLOBAL | PARA_BIRIMI: USD\nAnalizde Fed politikaları, küresel likidite, dolar endeksi ve uluslararası piyasa dinamiklerini ön planda tut.`
+    ? 'PIYASA: BIST30/TL — Türkiye makro dinamikleri, TCMB faizi, TL kuru öncelikli. BIST30 hisselerini tercih et.'
+    : 'PIYASA: GLOBAL/USD — Fed politikası, küresel likidite öncelikli.'
+
+  const systemPrompt = `Sen finansal bir analistsin. Haber metninden ETKİLENEN SPESİFİK FİNANSAL ENSTRÜMANLARI tespit etmek tek görevin.
+
+ZORUNLU KURALLAR:
+- Haberde adı geçen veya doğrudan etkilenen spesifik şirket/emtia/kripto sembollerini yaz
+- Örnekler: L'Oreal haberi → OR.PA | Apple haberi → AAPL | Altın haberi → GC=F | Bitcoin haberi → BTC-USD | THY haberi → THYAO
+- USDTRY, EUR/USD gibi döviz kurları SADECE haber doğrudan kur/para politikası hakkındaysa ekle
+- "Hisse Senetleri", "Kripto Para", "Emtia", "Döviz Kuru" gibi genel kategori isimleri KESİNLİKLE YASAK
+- Haberde geçmeyen enstrümanları EKLEME
+- Yanıtı Türkçe, geçerli JSON olarak döndür, başka metin ekleme`
+
+  const userPrompt = `${piyasaBaglami}
+
+Haber:
+"""
+${haberMetni}
+"""
+
+JSON:
+{
+  "haber_ozeti": "Piyasa etkisini 2 cümlede özetle.",
+  "piyasa_etkisi": "Pozitif / Negatif / Nötr",
+  "etki_suresi": "Kısa Vadeli (Günlük/Haftalık) veya Orta-Uzun Vadeli",
+  "etkilenen_sektorler": ["Spesifik sektör adı"],
+  "etkilenen_enstrumanlar": [
+    {
+      "enstruman_adi": "Spesifik sembol (OR.PA, THYAO, GC=F, BTC-USD vb.)",
+      "yonu": "Yukarı / Aşağı / Belirsiz",
+      "gerekce": "Haberdeki hangi bilgi bu enstrümanı etkiliyor."
+    }
+  ],
+  "risk_puani": 5
+}`
 
   let chat
   try {
@@ -50,14 +84,8 @@ export async function POST(req: NextRequest) {
       model: MODEL,
       response_format: { type: 'json_object' },
       messages: [
-        {
-          role: 'system',
-          content: `Sen kıdemli bir finansal analist ve ekonomi uzmanısın. Görevin, sana verilen haber metnini objektif, veri odaklı ve manipülasyondan uzak bir şekilde analiz etmektir.\nKesinlikle genel geçer veya yuvarlak cümleler kurma. Yatırım tavsiyesi vermeden, haberin piyasalara, sektörlere ve spesifik finansal enstrümanlara (hisse, emtia, döviz vb.) olası etkilerini rasyonel gerekçelerle açıkla.\nAnaliz raporunu her zaman Türkçe dilinde ve strictly geçerli bir JSON formatında döndür. JSON dışında hiçbir açıklama metni ekleme.`,
-        },
-        {
-          role: 'user',
-          content: `${piyasaBaglami}\n\nAnaliz Edilecek Haber:\n"""\n${haberMetni}\n"""\n\nYukarıdaki haberi analiz et ve aşağıdaki JSON şablonuna birebir uyarak yanıt ver:\n\n{\n  "haber_ozeti": "Haberin piyasaları ilgilendiren en kritik 2-3 cümlelik özeti.",\n  "piyasa_etkisi": "Pozitif / Negatif / Nötr",\n  "etki_suresi": "Kısa Vadeli (Günlük/Haftalık) veya Orta-Uzun Vadeli",\n  "etkilenen_sektorler": ["Sektör 1", "Sektör 2"],\n  "etkilenen_enstrumanlar": [\n    {\n      "enstruman_adi": "Somut sembol veya isim (Örn: THYAO, BTC, Altın, Petrol, USDTRY). Genel kategori adı yazma.",\n      "yonu": "Yukarı / Aşağı / Belirsiz",\n      "gerekce": "Bu enstrümanın neden ve nasıl etkileneceğine dair kısa, mantıksal argüman."\n    }\n  ],\n  "risk_puani": 3\n}\n\nNot: risk_puani 1-10 arası tam sayı olmalı (1: Çok Düşük Risk, 10: Çok Yüksek Risk).`,
-        },
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt },
       ],
       max_tokens: 600,
     })
