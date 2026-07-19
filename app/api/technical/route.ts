@@ -35,7 +35,9 @@ export async function POST(req: NextRequest) {
   const { ticker: rawTicker } = await req.json()
   if (!rawTicker) return NextResponse.json({ error: 'Ticker gerekli' }, { status: 400 })
 
-  const ticker = normalizeTicker(rawTicker)
+  // "Bitcoin (BTC)" → "BTC", "Gold (XAU)" → "XAU" gibi formatları temizle
+  const cleaned = rawTicker.replace(/^.*?\(([^)]+)\).*$/, '$1').trim()
+  const ticker = normalizeTicker(cleaned)
 
   let teknikVeri: TeknikVeri
   try {

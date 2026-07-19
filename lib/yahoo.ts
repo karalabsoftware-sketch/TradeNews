@@ -3,13 +3,50 @@ import type { OHLCV } from './indicators'
 // Ticker normalizasyonu
 export function normalizeTicker(raw: string): string {
   const t = raw.trim().toUpperCase()
+
+  // Zaten geçerli Yahoo formatı (BTC-USD, GC=F, THYAO.IS vb.)
+  if (t.includes('-') || t.includes('=') || t.includes('.')) return t
+
+  // Kripto isim/sembol eşlemesi
+  const kripto: Record<string, string> = {
+    'BITCOIN': 'BTC-USD', 'BTC': 'BTC-USD',
+    'ETHEREUM': 'ETH-USD', 'ETH': 'ETH-USD',
+    'SOLANA': 'SOL-USD', 'SOL': 'SOL-USD',
+    'RIPPLE': 'XRP-USD', 'XRP': 'XRP-USD',
+    'BINANCECOIN': 'BNB-USD', 'BNB': 'BNB-USD',
+    'CARDANO': 'ADA-USD', 'ADA': 'ADA-USD',
+    'DOGECOIN': 'DOGE-USD', 'DOGE': 'DOGE-USD',
+    'AVAX': 'AVAX-USD', 'AVALANCHE': 'AVAX-USD',
+    'POLKADOT': 'DOT-USD', 'DOT': 'DOT-USD',
+    'CHAINLINK': 'LINK-USD', 'LINK': 'LINK-USD',
+  }
+  if (kripto[t]) return kripto[t]
+
+  // Emtia eşlemesi
+  const emtia: Record<string, string> = {
+    'ALTIN': 'GC=F', 'GOLD': 'GC=F', 'XAU': 'GC=F',
+    'GUMUS': 'SI=F', 'SILVER': 'SI=F', 'XAG': 'SI=F',
+    'PETROL': 'CL=F', 'OIL': 'CL=F', 'WTI': 'CL=F', 'BRENT': 'BZ=F',
+    'DOGALGAZ': 'NG=F', 'NATURALGAS': 'NG=F',
+    'BAKIR': 'HG=F', 'COPPER': 'HG=F',
+    'PLATIN': 'PL=F', 'PLATINUM': 'PL=F',
+  }
+  if (emtia[t]) return emtia[t]
+
+  // Döviz eşlemesi
+  const doviz: Record<string, string> = {
+    'USDTRY': 'USDTRY=X', 'DOLAR': 'USDTRY=X', 'USD': 'USDTRY=X',
+    'EURTRY': 'EURTRY=X', 'EURO': 'EURTRY=X', 'EUR': 'EURTRY=X',
+    'EURUSD': 'EURUSD=X', 'GBPUSD': 'GBPUSD=X',
+    'JPYUSD': 'JPYUSD=X', 'USDJPY': 'JPY=X',
+  }
+  if (doviz[t]) return doviz[t]
+
   // BIST hisseleri
   const bist = ['THYAO','GARAN','AKBNK','EREGL','SISE','KCHOL','BIMAS','ASELS','TUPRS','PGSUS',
     'ISCTR','VAKBN','HALKB','YKBNK','TOASO','FROTO','DOHOL','SAHOL','KOZAL','ENKAI']
-  if (bist.includes(t) || (t.length <= 5 && !t.includes('.'))) {
-    // Türk hissesi olabilir, .IS ekle (zaten .IS varsa ekleme)
-    if (!t.endsWith('.IS') && bist.includes(t)) return `${t}.IS`
-  }
+  if (bist.includes(t)) return `${t}.IS`
+
   return t
 }
 
