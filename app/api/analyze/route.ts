@@ -40,40 +40,59 @@ export async function POST(req: NextRequest) {
   if (!content && summary) content = summary
 
   const haberMetni = content ? `Başlık: ${title}\n\nİçerik: ${content}` : `Başlık: ${title}`
-
   const piyasaBaglami = isBist
-    ? 'PIYASA: BIST30/TL — Türkiye makro dinamikleri, TCMB faizi, TL kuru öncelikli. BIST30 hisselerini tercih et.'
-    : 'PIYASA: GLOBAL/USD — Fed politikası, küresel likidite öncelikli.'
+    ? 'PIYASA: BIST30/TL — Türkiye ekonomisi, TCMB faizi, TL dinamikleri öncelikli.'
+    : 'PIYASA: GLOBAL/USD — Fed politikası, küresel piyasalar öncelikli.'
 
-  const systemPrompt = `Sen finansal bir analistsin. Haber metnini analiz edip YALNIZCA haberde ADI GEÇEN veya haberin DOĞRUDAN ETKİLEDİĞİ finansal enstrümanları tespit edeceksin.
-
-ZORUNLU KURALLAR:
-1. Haberde adı geçen şirket varsa → o şirketin borsa sembolünü yaz (L'Oreal → OR.PA, Apple → AAPL, Garanti → GARAN)
-2. Haberde adı geçen emtia varsa → sembolünü yaz (altın → GC=F, petrol → CL=F, bitcoin → BTC-USD)
-3. Haber doğrudan döviz/faiz politikası hakkındaysa → döviz sembolü ekle (USDTRY=X, EURUSD=X)
-4. Haber genel ekonomi, siyaset, doğal afet, sosyal konu ise → etkilenen_enstrumanlar BOŞ ARRAY döndür []
-5. "Hisse Senetleri", "Kripto Para", "Emtia Piyasası", "Döviz Kuru" gibi KATEGORİ İSİMLERİ KESİNLİKLE YASAK
-6. Haberde geçmeyen, sadece sektörel çıkarım yaptığın enstrümanları EKLEME — emin değilsen EKLEME
-7. Yanıtı Türkçe geçerli JSON olarak döndür, başka metin ekleme`
-
-  const userPrompt = `${piyasaBaglami}
+  // Aşama 1: Haberi anla ve bağlamı çıkar
+  let haberBaglami = haberMetni
+  try {
+    const ozet = await groq.chat.completions.create({
+      model: MODEL,
+      messages: [{
+        role: 'user',
+        content: `Aşağıdaki haber metnini oku ve şu soruları yanıtla (Türkçe, düz metin, 3-4 cümle):
+- Bu haberin konusu tam olarak nedir?
+- Hangi şirket, kurum, ülke veya ürün adları geçiyor?
+- Haberin ekonomik/finansal önemi nedir?
 
 Haber:
 """
 ${haberMetni}
-"""
+"""`,
+      }],
+      max_tokens: 300,
+    })
+    const ctx = ozet.choices[0].message.content?.trim()
+    if (ctx) haberBaglami = `${haberMetni}\n\n[Haber Bağlamı]: ${ctx}`
+  } catch {
+    // Aşama 1 başarısız olursa devam et
+  }
 
-JSON:
+  // Aşama 2: Finansal analiz
+  const systemPrompt = `Sen deneyimli bir finansal analistsin. Sana verilen haberi ve bağlamını dikkatlice okuyarak detaylı bir piyasa analizi yapacaksın.
+
+KURALLAR:
+- haber_ozeti: Haberin piyasa açısından önemini, nedenini ve sonucunu açıklayan 3-4 cümle. "Fed politikası" gibi genel klişe cümleler YASAK — haberin spesifik içeriğini yaz.
+- etkilenen_enstrumanlar: SADECE haberde adı geçen veya doğrudan ilişkili enstrümanlar. Haberde şirket adı geçiyorsa o şirketin sembolü (Apple→AAPL, Garanti→GARAN, L'Oreal→OR.PA). Emtia geçiyorsa sembolü (altın→GC=F). Döviz/faiz haberi değilse USDTRY ekleme. Emin değilsen boş bırak.
+- gerekce: "Bu haber X şirketini şu nedenle etkiler: ..." şeklinde somut, habere özgü gerekçe.
+- Yanıt Türkçe, geçerli JSON, başka metin yok.`
+
+  const userPrompt = `${piyasaBaglami}
+
+${haberBaglami}
+
+JSON formatında yanıt ver:
 {
-  "haber_ozeti": "Piyasa etkisini 2 cümlede özetle.",
+  "haber_ozeti": "Haberin piyasa açısından önemi, spesifik detaylarla 3-4 cümle.",
   "piyasa_etkisi": "Pozitif / Negatif / Nötr",
   "etki_suresi": "Kısa Vadeli (Günlük/Haftalık) veya Orta-Uzun Vadeli",
-  "etkilenen_sektorler": ["Haberde geçen spesifik sektör, yoksa boş array"],
+  "etkilenen_sektorler": ["Spesifik sektör adı"],
   "etkilenen_enstrumanlar": [
     {
-      "enstruman_adi": "Sembol — SADECE haberde adı geçen veya doğrudan etkilenen enstrüman",
+      "enstruman_adi": "Sembol — haberde geçen enstrüman",
       "yonu": "Yukarı / Aşağı / Belirsiz",
-      "gerekce": "Haberin hangi cümlesi/verisi bu enstrümanı etkiliyor — somut gerekçe"
+      "gerekce": "Haberin hangi spesifik bilgisi bu enstrümanı nasıl etkiliyor."
     }
   ],
   "risk_puani": 5
@@ -88,7 +107,7 @@ JSON:
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
       ],
-      max_tokens: 600,
+      max_tokens: 1000,
     })
   } catch (e: unknown) {
     const err = e as { status?: number; error?: unknown; message?: string }
