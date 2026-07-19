@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Groq from 'groq-sdk'
 import { fetchOHLCV, normalizeTicker } from '@/lib/yahoo'
-import { hesaplaTeknikVeri, type TeknikVeri } from '@/lib/indicators'
+import { hesaplaTeknikVeri, type TeknikVeri, type OHLCV } from '@/lib/indicators'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 45
@@ -35,16 +35,45 @@ export async function POST(req: NextRequest) {
   const { ticker: rawTicker } = await req.json()
   if (!rawTicker) return NextResponse.json({ error: 'Ticker gerekli' }, { status: 400 })
 
-  // "Bitcoin (BTC)" → "BTC", "Gold (XAU)" → "XAU" gibi formatları temizle
-  const cleaned = rawTicker.replace(/^.*?\(([^)]+)\).*$/, '$1').trim()
-  const ticker = normalizeTicker(cleaned)
+  // 1. Adım: normalizasyon tablosuyla dene
+  let ticker = normalizeTicker(rawTicker)
+  let bars: OHLCV[]
+  try {
+    bars = await fetchOHLCV(ticker, 250)
+  } catch {
+    // 2. Adım: Başarısız olduysa Groq'a ticker'ı sor
+    try {
+      const lookup = await groq.chat.completions.create({
+        model: process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
+        response_format: { type: 'json_object' },
+        messages: [{
+          role: 'user',
+          content: `"${rawTicker}" ifadesinin Yahoo Finance'deki tam ticker sembolünü bul.
+Sadece JSON döndür: {"ticker": "SEMBOL"}
+Kurallar:
+- Hisse senedi ise borsa suffix ekle (ABD: yok, BIST: .IS, Londra: .L vb.)
+- Kripto ise -USD ekle (BTC-USD)
+- Döviz kuru ise =X ekle (USDTRY=X)
+- Emtia futures ise =F ekle (GC=F)
+- Eğer halka açık işlem gören bir enstrüman değilse veya bulamazsan: {"ticker": ""}`
+        }],
+        max_tokens: 50,
+      })
+      const raw = lookup.choices[0].message.content ?? '{}'
+      const resolved = JSON.parse(raw).ticker?.trim()
+      if (!resolved) return NextResponse.json({ error: `Ticker çözümlenemedi: ${rawTicker}` }, { status: 422 })
+      ticker = resolved
+      bars = await fetchOHLCV(ticker, 250)
+    } catch (e2) {
+      return NextResponse.json({ error: `Veri çekilemedi: ${String(e2)}` }, { status: 422 })
+    }
+  }
 
   let teknikVeri: TeknikVeri
   try {
-    const bars = await fetchOHLCV(ticker, 250)
     teknikVeri = hesaplaTeknikVeri(ticker, bars)
   } catch (e) {
-    return NextResponse.json({ error: `Veri çekilemedi: ${String(e)}` }, { status: 422 })
+    return NextResponse.json({ error: `İndikatör hesaplanamadı: ${String(e)}` }, { status: 422 })
   }
 
   const prompt = formatPrompt(teknikVeri)
