@@ -319,7 +319,7 @@ export default function Home() {
 
   async function handleRefresh() {
     setRefreshing(true)
-    try { await fetch('/api/refresh', { method: 'POST' }); await loadNews() }
+    try { await fetch('/api/refresh', { method: 'POST' }); await loadNews(piyasa) }
     catch (e) { console.error(e) }
     setRefreshing(false)
   }
