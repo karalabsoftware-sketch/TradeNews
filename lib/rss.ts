@@ -96,8 +96,9 @@ async function fetchFeeds(feeds: typeof GLOBAL_FEEDS, piyasa: 'global' | 'bist')
   const fetches = feeds.map(async ({ url, name }) => {
     const xml = await fetchRSS(url)
     if (!xml) { console.warn(`Could not fetch ${name}`); return [] }
-    console.log(`Fetched ${name}`)
-    return parseRSSItems(xml, name, piyasa)
+    const parsed = parseRSSItems(xml, name, piyasa)
+    console.log(`Fetched ${name} (${piyasa}): ${parsed.length} items`)
+    return parsed
   })
   const settled = await Promise.allSettled(fetches)
   const results: NewsItem[] = []
