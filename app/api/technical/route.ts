@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     // 2. Adım: Başarısız olduysa Groq'a ticker'ı sor
     try {
       const lookup = await groq.chat.completions.create({
-        model: process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
+        model: process.env.GROQ_MODEL ?? 'llama-3.1-8b-instant',
         response_format: { type: 'json_object' },
         messages: [{
           role: 'user',
@@ -85,7 +85,7 @@ Kurallar:
   let chat
   try {
     chat = await groq.chat.completions.create({
-      model: process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
+      model: process.env.GROQ_MODEL ?? 'llama-3.1-8b-instant',
       response_format: { type: 'json_object' },
       messages: [
         {
@@ -147,7 +147,7 @@ Not: teknik_puan 1-10 arası (1: Çok Zayıf Teknik Görünüm, 10: Çok Güçl�
           e.enstruman_adi.toLowerCase().includes(rawTicker.toLowerCase())
       )
       const sinyalChat = await groq.chat.completions.create({
-        model: process.env.GROQ_MODEL ?? 'llama-3.3-70b-versatile',
+        model: process.env.GROQ_MODEL ?? 'llama-3.1-8b-instant',
         response_format: { type: 'json_object' },
         messages: [{
           role: 'user',
