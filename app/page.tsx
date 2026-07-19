@@ -53,6 +53,23 @@ function parseJSON<T>(raw: string): T | null {
   try { return JSON.parse(raw) } catch { return null }
 }
 
+// Enstruman_adi'nin teknik analiz yapilabilir bir ticker olup olmadigini kontrol eder
+const GENEL_IFADELER_EXTENDED = [
+  'endeks', 'senet', 'piyasa', 'sektör', 'sektor', 'fon', 'tahvil', 'bono',
+  'para birimi', 'kripto para', 'hisse', 'borsa', 'piyasası', 'piyasasi',
+  'enstrüman', 'enstruman', 'varlık', 'varlik', 'kategori', 'grubu', 'sirketi',
+  'şirketi', 'holding', 'sektoru', 'sektörü',
+]
+
+function isTeknikAnalizYapilabirMi(enstrumanAdi: string): boolean {
+  const lower = enstrumanAdi.toLowerCase()
+  // Genel kategori ifadesi mi?
+  if (GENEL_IFADELER_EXTENDED.some(k => lower.includes(k))) return false
+  // Çok uzun isimler genellikle genel ifadedir (>25 karakter)
+  if (enstrumanAdi.length > 25) return false
+  return true
+}
+
 function RiskBar({ puan, max = 10 }: { puan: number; max?: number }) {
   const clamped = Math.min(Math.max(Math.round(puan), 1), max)
   const c = clamped <= 3 ? '#4caf50' : clamped <= 5 ? '#ffc107' : clamped <= 7 ? '#ff9800' : '#f44336'
@@ -70,9 +87,8 @@ function RiskBar({ puan, max = 10 }: { puan: number; max?: number }) {
 function AnalizKart({ analiz }: { analiz: Analiz }) {
   const etkiRenk = analiz.piyasa_etkisi === 'Pozitif' ? '#4caf50' : analiz.piyasa_etkisi === 'Negatif' ? '#f44336' : '#ffc107'
   // Genel kategori adlarını filtrele, sadece somut semboller kalsın
-  const GENEL_IFADELER = ['endeks', 'senet', 'piyasa', 'sektör', 'sektor', 'fon', 'tahvil', 'bono', 'para birimi', 'kripto para']
   const somutEnstrumanlar = analiz.etkilenen_enstrumanlar?.filter(
-    e => !GENEL_IFADELER.some(k => e.enstruman_adi.toLowerCase().includes(k))
+    e => isTeknikAnalizYapilabirMi(e.enstruman_adi)
   ) ?? []
 
   return (
@@ -355,9 +371,8 @@ export default function Home() {
         {filtered.map(item => {
           const analiz = item.analysis ? parseJSON<Analiz>(item.analysis) : null
           const teknik = teknikState[item.id]
-          const GENEL_IFADELER = ['endeks', 'senet', 'piyasa', 'sektör', 'sektor', 'fon', 'tahvil', 'bono', 'para birimi', 'kripto para']
           const somutEnstrumanlar = analiz?.etkilenen_enstrumanlar?.filter(
-            e => !GENEL_IFADELER.some(k => e.enstruman_adi.toLowerCase().includes(k))
+            e => isTeknikAnalizYapilabirMi(e.enstruman_adi)
           ) ?? []
           return (
             <div key={item.id} style={s.card}>

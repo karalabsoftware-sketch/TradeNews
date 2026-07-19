@@ -50,12 +50,16 @@ export async function POST(req: NextRequest) {
           role: 'user',
           content: `"${rawTicker}" ifadesinin Yahoo Finance'deki tam ticker sembolünü bul.
 Sadece JSON döndür: {"ticker": "SEMBOL"}
+
 Kurallar:
 - Hisse senedi ise borsa suffix ekle (ABD: yok, BIST: .IS, Londra: .L vb.)
 - Kripto ise -USD ekle (BTC-USD)
 - Döviz kuru ise =X ekle (USDTRY=X)
 - Emtia futures ise =F ekle (GC=F)
-- Eğer halka açık işlem gören bir enstrüman değilse veya bulamazsan: {"ticker": ""}`
+- "Kozmetik Hisseleri", "Teknoloji Sektörü", "Bankacılık Endeksi" gibi sektör/kategori ifadeleri için: {"ticker": ""}
+- Birden fazla şirketi kapsayan genel ifadeler için: {"ticker": ""}
+- Yahoo Finance'de doğrudan işlem görmeyen her şey için: {"ticker": ""}
+- Sadece tek bir spesifik enstrümanı temsil eden semboller için ticker döndür`
         }],
         max_tokens: 50,
       })
